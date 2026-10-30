@@ -1341,9 +1341,17 @@ record_result() {
     append_run_log "$1"
 }
 
+run_status() {
+    case "$1" in Stopped:*) echo stopped; return ;; esac
+    if [ "$COUNT_ERRORS" -gt 0 ]; then echo error
+    elif [ "$COUNT_CONFLICTS" -gt 0 ]; then echo conflict
+    else echo ok
+    fi
+}
+
 append_run_log() {
     if ! { mkdir -p "$(dirname "$RUN_LOG")" && rotate_log "$RUN_LOG" \
-        && printf '%s\t%s\t%s\n' "$(date '+%F %T')" "$(pair_label "$CURRENT_PAIR")" "$1" >> "$RUN_LOG"; }; then
+        && printf '%s\t%s\t%s\t%s\n' "$(date '+%F %T')" "$(run_status "$1")" "$(pair_label "$CURRENT_PAIR")" "$1" >> "$RUN_LOG"; }; then
         log "[ERROR] Couldn't write the run log $RUN_LOG"
         notify normal "Proton Drive Sync" "Couldn't write the run log $RUN_LOG"
     fi
