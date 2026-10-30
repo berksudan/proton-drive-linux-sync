@@ -606,8 +606,8 @@ list_remote_dir() {
         (if .type | type == "object" then .type.value else .type end) as $type |
         (if .name | type == "object" then .name.value else .name end) as $name |
         (if .mediaType | type == "object" then .mediaType.value else (.mediaType // "") end) as $media |
-        (.activeRevision.value.claimedSize // 0) as $size |
-        (.activeRevision.value.claimedModificationTime // "") as $mtime |
+        (((.activeRevision.value // .activeRevision) | .claimedSize) // 0) as $size |
+        (((.activeRevision.value // .activeRevision) | .claimedModificationTime) // "") as $mtime |
         (if ($mtime | type) == "string"
             and ($mtime | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?Z$"))
          then "@" + ($mtime | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601 | floor | tostring)
@@ -710,8 +710,8 @@ fetch_remote_fingerprint() {
     local info rsize rmtime rmtime_epoch
     info=$(proton-drive filesystem info "$remote_path" -j 2>/dev/null) || true
     [ -z "$info" ] && { echo ""; return; }
-    rsize=$(echo "$info" | jq -r '.activeRevision.value.claimedSize // 0')
-    rmtime=$(echo "$info" | jq -r '.activeRevision.value.claimedModificationTime // ""')
+    rsize=$(echo "$info" | jq -r '((.activeRevision.value // .activeRevision) | .claimedSize) // 0')
+    rmtime=$(echo "$info" | jq -r '((.activeRevision.value // .activeRevision) | .claimedModificationTime) // ""')
     rmtime_epoch=0
     [ -n "$rmtime" ] && rmtime_epoch=$(date -d "$rmtime" +%s 2>/dev/null || echo 0)
     echo "${rsize}|${rmtime_epoch}"
@@ -968,7 +968,7 @@ resolve_keep_remote() {
     local remote_path="$REMOTE_DIR/$rel"
     log "[RESOLVE keep-remote] $rel"
     ensure_local_folders "$(dirname "$local_path")"
-    if run_retry proton-drive filesystem download -f replace "$remote_path" "$(dirname "$local_path")"; then
+    if run_retry proton-drive filesystem download -f remove "$remote_path" "$(dirname "$local_path")"; then
         COUNT_DOWNLOADED=$((COUNT_DOWNLOADED + 1))
         local lfp
         if [ "$DRY_RUN" = false ]; then
@@ -1110,7 +1110,7 @@ run_one_job() {
     case "$kind" in
         up_mod)   run_retry proton-drive filesystem upload -f replace "$local_path" "$(dirname "$remote_path")" || rc=1 ;;
         up_new)   run_retry proton-drive filesystem upload "$local_path" "$(dirname "$remote_path")" || rc=1 ;;
-        down_mod) run_retry proton-drive filesystem download -f replace "$remote_path" "$(dirname "$local_path")" || rc=1 ;;
+        down_mod) run_retry proton-drive filesystem download -f remove "$remote_path" "$(dirname "$local_path")" || rc=1 ;;
         down_new) run_retry proton-drive filesystem download "$remote_path" "$(dirname "$local_path")" || rc=1 ;;
         trash)    run_retry proton-drive filesystem trash "$remote_path" || rc=1 ;;
     esac
