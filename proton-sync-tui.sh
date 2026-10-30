@@ -3095,7 +3095,8 @@ UNIT
 
 remove_automatic_sync() {
     if [ -f "$UNIT_DIR/$TIMER_UNIT" ] || [ -f "$UNIT_DIR/$WATCH_UNIT" ]; then
-        systemctl --user disable --now "$TIMER_UNIT" "$WATCH_UNIT" >/dev/null 2>&1
+        systemctl --user disable --now "$TIMER_UNIT" >/dev/null 2>&1
+        systemctl --user disable --now "$WATCH_UNIT" >/dev/null 2>&1
         rm -f "$UNIT_DIR/$TIMER_UNIT" "$UNIT_DIR/$SERVICE_UNIT" "$UNIT_DIR/$WATCH_UNIT"
         systemctl --user daemon-reload >/dev/null 2>&1
     fi
