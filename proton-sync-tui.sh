@@ -3129,6 +3129,19 @@ apply_automatic_sync() {
     fi
 }
 
+schedule_from_cli() {
+    local kind="$1" used
+    if [ "$kind" = watch ] && ! command -v inotifywait >/dev/null 2>&1; then
+        echo "ERROR: continuous sync needs inotifywait (for example: sudo apt install inotify-tools)" >&2
+        return 1
+    fi
+    if ! used=$(apply_automatic_sync "$kind"); then
+        echo "ERROR: couldn't set up automatic sync. Check that systemd or cron is working for your user." >&2
+        return 1
+    fi
+    echo "Automatic sync: $(schedule_text)${used:+ (using $used)}"
+}
+
 schedule_menu() {
     local have_systemd=false have_cron=false
     systemd_available && have_systemd=true
@@ -3610,6 +3623,8 @@ Usage: $(basename "$0") [OPTIONS]
   --watch          Continuous sync: sync local changes within seconds and
                    check Proton regularly. Runs until stopped.
   --status         Show folder pairs, last results and automatic sync, then exit.
+  --schedule KIND  Set automatic sync without the menu, then exit. KIND is
+                   off, hourly, six (every 6 hours), daily or watch (continuous).
   --install        Copy this script to ~/.local/bin/proton-drive-sync and add
                    a desktop launcher.
   --uninstall      Remove the installed copy and launcher (keeps your settings).
@@ -3627,6 +3642,7 @@ HEADLESS=false
 START_FRESH=false
 ACTION=menu
 ONLY_PAIR=""
+SCHEDULE_KIND=""
 while [ $# -gt 0 ]; do
     case "$1" in
         --headless|--sync) HEADLESS=true ;;
@@ -3641,6 +3657,13 @@ while [ $# -gt 0 ]; do
             ONLY_PAIR=$((n - 1)) ;;
         --watch) ACTION=watch ;;
         --status) ACTION=status ;;
+        --schedule|--schedule=*)
+            if [ "$1" = --schedule ]; then shift; SCHEDULE_KIND="${1:-}"; else SCHEDULE_KIND="${1#--schedule=}"; fi
+            case "$SCHEDULE_KIND" in
+                off|hourly|six|daily|watch) ;;
+                *) echo "--schedule needs one of: off, hourly, six, daily, watch" >&2; exit 2 ;;
+            esac
+            ACTION=schedule ;;
         --install) ACTION=install ;;
         --uninstall) ACTION=uninstall ;;
         -h|--help) usage; exit 0 ;;
@@ -3669,6 +3692,7 @@ select_pair "${ONLY_PAIR:-$CURRENT_PAIR}"
 
 case "$ACTION" in
     status)    print_status; exit 0 ;;
+    schedule)  schedule_from_cli "$SCHEDULE_KIND"; exit $? ;;
     install)   install_script; exit $? ;;
     uninstall) uninstall_script; exit $? ;;
 esac
