@@ -48,6 +48,7 @@ EXCLUDE_PATTERNS=(
 CONFIG_FILE="${PROTON_SYNC_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/proton-sync/config}"
 STATE_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/proton-sync"
 LOCK_FILE="$STATE_ROOT/sync.lock"
+RUN_LOG="$STATE_ROOT/run-logs/runs.log"
 SCRIPT_PATH=$(readlink -f "${BASH_SOURCE[0]}")
 
 # Field separator for manifests, snapshot and conflict list. The ASCII unit
@@ -1337,6 +1338,15 @@ record_result() {
     log "RESULT: $1"
     [ "$DRY_RUN" = true ] && return 0
     printf '%s\t%s\n' "$(date +%s)" "$1" > "$STATUS_FILE"
+    append_run_log "$1"
+}
+
+append_run_log() {
+    if ! { mkdir -p "$(dirname "$RUN_LOG")" && rotate_log "$RUN_LOG" \
+        && printf '%s\t%s\t%s\n' "$(date '+%F %T')" "$(pair_label "$CURRENT_PAIR")" "$1" >> "$RUN_LOG"; }; then
+        log "[ERROR] Couldn't write the run log $RUN_LOG"
+        notify normal "Proton Drive Sync" "Couldn't write the run log $RUN_LOG"
+    fi
 }
 
 # True if deleting N files needs the user's confirmation.
@@ -3287,8 +3297,8 @@ notify() {
     notify-send -a "Proton Drive Sync" -u "$1" "$2" "$3" >/dev/null 2>&1 || true
 }
 
-rotate_cron_log() {
-    local f="$STATE_ROOT/cron.log"
+rotate_log() {
+    local f="$1"
     if [ -f "$f" ] && [ "$(stat -c %s "$f")" -gt 1048576 ]; then
         mv -f "$f" "$f.1"
     fi
@@ -3719,7 +3729,7 @@ if [ "$ACTION" = watch ]; then
 fi
 
 if [ "$HEADLESS" = true ]; then
-    rotate_cron_log
+    rotate_log "$STATE_ROOT/cron.log"
     rc=0
     headless_run || rc=$?
     [ "$rc" -eq 0 ] || exit 1
