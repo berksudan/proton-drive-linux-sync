@@ -1342,16 +1342,24 @@ record_result() {
 }
 
 run_status() {
-    case "$1" in Stopped:*) echo stopped; return ;; esac
-    if [ "$COUNT_ERRORS" -gt 0 ]; then echo error
-    elif [ "$COUNT_CONFLICTS" -gt 0 ]; then echo conflict
-    else echo ok
+    case "$1" in Stopped:*) echo STOPPED; return ;; esac
+    if [ "$COUNT_ERRORS" -gt 0 ]; then echo ERROR
+    elif [ "$COUNT_CONFLICTS" -gt 0 ]; then echo CONFLICT
+    else echo OK
+    fi
+}
+
+run_trigger() {
+    if [ "$ACTION" = watch ]; then echo CONTINUOUS
+    elif [ "$HEADLESS" = true ]; then echo HEADLESS
+    else echo MENU
     fi
 }
 
 append_run_log() {
     if ! { mkdir -p "$(dirname "$RUN_LOG")" && rotate_log "$RUN_LOG" \
-        && printf '%s\t%s\t%s\t%s\n' "$(date '+%F %T')" "$(run_status "$1")" "$(pair_label "$CURRENT_PAIR")" "$1" >> "$RUN_LOG"; }; then
+        && printf '%s\t%s\t%s\t%s\t%s\n' "$(date '+%F %T')" "$(run_status "$1")" "$(run_trigger)" \
+            "$(pair_label "$CURRENT_PAIR")" "$1" >> "$RUN_LOG"; }; then
         log "[ERROR] Couldn't write the run log $RUN_LOG"
         notify normal "Proton Drive Sync" "Couldn't write the run log $RUN_LOG"
     fi
@@ -1377,14 +1385,18 @@ show_run_log() {
         BEGIN {
             if (color == "true") {
                 dim = "\033[2m"; reset = "\033[0m"
-                status_color["ok"] = "\033[32m"
-                status_color["conflict"] = "\033[1;33m"
-                status_color["error"] = "\033[1;31m"
-                status_color["stopped"] = "\033[1;31m"
+                status_color["OK"] = "\033[32m"
+                status_color["CONFLICT"] = "\033[1;33m"
+                status_color["ERROR"] = "\033[1;31m"
+                status_color["STOPPED"] = "\033[1;31m"
+                trigger_color["CONTINUOUS"] = "\033[36m"
+                trigger_color["HEADLESS"] = "\033[34m"
+                trigger_color["MENU"] = "\033[35m"
             }
         }
         {
-            printf "%s%s%s  %s%-8s%s  %s  %s\n", dim, $1, reset, status_color[$2], $2, reset, $3, $4
+            printf "%s%s%s  %s%-8s%s  %s%-10s%s  %s  %s\n", dim, $1, reset, status_color[$2], $2, reset, \
+                trigger_color[$3], $3, reset, $4, $5
             fflush()
         }'
 }
@@ -2668,9 +2680,9 @@ Each folder pair has its own history, logs and trash."
 # FOLDER PAIR SCREENS
 # ============================================================
 
-# pair_label INDEX — "~/Docs <-> /docs"; the arrow shows the sync direction.
+# pair_label INDEX — "~/Docs <> /docs"; the arrow shows the sync direction.
 pair_label() {
-    local arrow="<->"
+    local arrow="<>"
     case "${PAIR_MODE[$1]}" in upload) arrow="->" ;; download) arrow="<-" ;; esac
     echo "$(display_path "${PAIR_LOCAL[$1]}") $arrow ${PAIR_REMOTE[$1]}"
 }
