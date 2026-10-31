@@ -1,7 +1,5 @@
 /.agents/
 /config/*
 !/config/settings.example.yaml
-/logs/
-/state/
 /tests/sandboxes/
 __pycache__/

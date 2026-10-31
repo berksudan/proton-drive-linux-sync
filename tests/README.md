@@ -7,8 +7,8 @@
 
 ## Isolation
 
-- Each test copies the repo into `tests/sandboxes/<test>/repo`, leaving out `.git`, `.agents`, `logs`, `state`, `tests` and everything in `config/` except `settings.example.yaml`, so your settings, run log and sync history are never read or changed.
-- Each test also gets its own HOME and XDG folders inside its sandbox, so the installed command, launcher and systemd units it creates stay there.
+- Each test copies into `tests/sandboxes/<test>/repo` only the files git would commit (`git ls-files --cached --others --exclude-standard`, without `tests/`), so gitignored files such as `config/settings.yaml` and `.agents/` never reach a test.
+- Each test also gets its own HOME and XDG folders (`XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_STATE_HOME`) inside its sandbox, so its sync history, run log, installed command, launcher and systemd units stay there and never touch yours.
 - `systemctl`, `crontab`, `sudo` and `notify-send` are stubs that only record their arguments, so your running continuous sync is never touched.
 - Sandboxes are deleted after each test; set `PROTON_SYNC_KEEP_SANDBOXES=1` to keep them for debugging (`tests/sandboxes/` is gitignored).
 - Proton tests work in a new `/my-files/proton-sync-tests-<timestamp>` folder; afterwards it is trashed and permanently deleted together with every test file the syncs trashed, but a trashed name your own items also use is left in the trash and reported.

@@ -10,10 +10,10 @@ conflict_strategy: ask
 # Transfers and folder listings that run at the same time.
 sync_jobs: 4
 
-# Days to keep files in the local trash (state/pairs/<id>/trash); 0 keeps them until you delete them.
+# Days to keep files in the local trash (~/.local/state/proton-drive-sync/pairs/<id>/trash); 0 keeps them until you delete them.
 trash_retention_days: 30
 
-# Days to keep detailed per-run logs (state/pairs/<id>/logs); 0 keeps them forever.
+# Days to keep detailed per-run logs (~/.local/state/proton-drive-sync/pairs/<id>/logs); 0 keeps them forever.
 log_retention_days: 90
 
 # Ask before a sync deletes more files than this; 0 turns the check off.

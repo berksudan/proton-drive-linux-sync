@@ -58,4 +58,4 @@ print_step "[3/4] Turning on continuous sync"
 enable_continuous_sync
 print_step "[4/4] Installing the proton-drive-sync command"
 install_sync_command
-print_step "Setup done. Settings: $REPO_DIR/config/settings.yaml, run log: $REPO_DIR/logs/runs.log"
+print_step "Setup done. Settings: $REPO_DIR/config/settings.yaml. Recent syncs: proton-drive-sync --log"

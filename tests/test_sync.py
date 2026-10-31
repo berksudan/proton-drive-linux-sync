@@ -233,7 +233,7 @@ class RunLogTests(harness.SyncTestCase):
 
     def test_unwritable_run_log_does_not_stop_the_sync(self) -> None:
         self.configure()
-        self.sandbox.run_log.parent.write_text("a file where the logs folder should be")
+        self.sandbox.run_log.mkdir(parents=True)
         self.write_local("a.txt", "a")
         self.sync()
         self.assertIn("a.txt", self.remote_names())

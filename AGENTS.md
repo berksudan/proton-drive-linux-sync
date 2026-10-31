@@ -11,14 +11,14 @@
 - `scripts/setup.sh`: machine setup: apt packages, `config/settings.yaml` from the example when missing, continuous sync, then `--install`.
 - `config/settings.example.yaml`: tracked settings template holding every setting at its built-in default, with no folder pairs.
 - `config/settings.yaml`: this machine's settings and folder pairs (`CONFIG_FILE`, read by `load_config`, written by `save_config`), gitignored.
-- `logs/runs.log`: one line per sync run (`RUN_LOG`), gitignored.
-- `state/`: sync history, detailed per-run logs, local trash and the lock (`STATE_ROOT`), gitignored.
 - `tests/`: end-to-end test suite; `tests/README.md` explains how it isolates itself.
 - `LICENSE`: upstream MIT notice; keep it with the code.
 
 ## Runtime
 
-- Every file the tool reads or writes lives in this repo (`APP_DIR`); outside it are only the hooks the system looks for elsewhere: the `~/.local/bin/proton-drive-sync` link and desktop launcher (`install_script`, `uninstall_script`) and the systemd user units (`write_systemd_units`, `remove_automatic_sync`).
+- Program code and settings live in this repo (`APP_DIR`); the repo never changes while syncs run.
+- Program state lives in `${XDG_STATE_HOME:-~/.local/state}/proton-drive-sync` (`STATE_ROOT`): `runs.log` (`RUN_LOG`), and per folder pair in `pairs/<id>/` the sync history (`snapshot`), detailed per-run logs and the local trash, plus the lock while a sync runs.
+- The only other files outside the repo are the hooks the system looks for elsewhere: the `~/.local/bin/proton-drive-sync` link and desktop launcher (`install_script`, `uninstall_script`) and the systemd user units (`write_systemd_units`, `remove_automatic_sync`).
 - `--install` links `~/.local/bin/proton-drive-sync` (`INSTALL_PATH`) to this repo's `proton-sync-tui.sh`, so background sync runs the repo files, uncommitted edits included, from its next restart; run `./proton-sync-tui.sh --install` to restart automatic sync on purpose.
 - Moving or deleting the repo breaks the installed command and automatic sync until `scripts/setup.sh` runs from the new location.
 - `scripts/setup.sh` turns on continuous sync (`--schedule watch`), a systemd user service written by `write_systemd_units`.
@@ -32,7 +32,7 @@
 
 ## Sync Run Log
 
-- Show recent sync runs with `proton-drive-sync --log`: the last 20 lines of `logs/runs.log` as time, status (`OK`, `CONFLICT`, `ERROR`, `STOPPED`), trigger (`CONTINUOUS` continuous sync, `SCHEDULED_HEADLESS` timer or cron, `MANUAL_HEADLESS` `--headless` run from a terminal, `MANUAL_MENU` menu sync), folder pair and result (`show_run_log`, `run_status`, `run_trigger`).
+- Show recent sync runs with `proton-drive-sync --log`: the last 20 lines of `runs.log` (`RUN_LOG`) as time, status (`OK`, `CONFLICT`, `ERROR`, `STOPPED`), trigger (`CONTINUOUS` continuous sync, `SCHEDULED_HEADLESS` timer or cron, `MANUAL_HEADLESS` `--headless` run from a terminal, `MANUAL_MENU` menu sync), folder pair and result (`show_run_log`, `run_status`, `run_trigger`).
 - `proton-drive-sync --log -f` follows new sync runs until stopped, so give it to the user instead of running it.
 
 ## Checks

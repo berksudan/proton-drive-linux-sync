@@ -43,8 +43,9 @@ Usage: $(basename "$0") [OPTIONS]
   --schedule KIND  Set automatic sync without the menu, then exit. KIND is
                    off, hourly, six (every 6 hours), daily or watch (continuous).
   --install        Link ~/.local/bin/proton-drive-sync to this script and add a
-                   desktop launcher. Settings and the run log stay next to it.
-  --uninstall      Remove that link and the launcher (keeps your settings).
+                   desktop launcher. Settings stay next to it in config/.
+  --uninstall      Remove that link and the launcher (keeps your settings
+                   and sync history).
   --help           Show this help.
 
 Settings are read from $CONFIG_FILE

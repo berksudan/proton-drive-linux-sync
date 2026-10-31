@@ -26,31 +26,7 @@ init_state_paths() {
 
     mkdir -p "$STATE_DIR" "$LOG_DIR"
     printf 'Local:  %s\nProton: %s\n' "$LOCAL_DIR" "$REMOTE_DIR" > "$STATE_DIR/folders"
-    migrate_legacy_state
     touch "$SNAPSHOT"
-}
-
-# Older versions kept one snapshot, log folder and trash directly in
-# $STATE_ROOT. Hand them to the current folder pair if it has no history.
-migrate_legacy_state() {
-    [ -f "$STATE_ROOT/snapshot" ] || return 0
-    [ -s "$SNAPSHOT" ] && return 0
-    mv "$STATE_ROOT/snapshot" "$SNAPSHOT" || return 0
-    local f
-    for f in "$STATE_ROOT"/logs/*; do
-        [ -e "$f" ] && mv "$f" "$LOG_DIR/"
-    done
-    if [ -d "$STATE_ROOT/trash" ]; then
-        mkdir -p "$TRASH_DIR"
-        for f in "$STATE_ROOT"/trash/*; do
-            [ -e "$f" ] && mv "$f" "$TRASH_DIR/"
-        done
-        rmdir "$STATE_ROOT/trash" 2>/dev/null
-    fi
-    rmdir "$STATE_ROOT/logs" 2>/dev/null
-    rm -f "$STATE_ROOT/local_manifest" "$STATE_ROOT/remote_manifest" \
-          "$STATE_ROOT/snapshot.new" "$STATE_ROOT/conflicts.tmp"
-    log "Moved sync history from an earlier version into $STATE_DIR"
 }
 
 # Forget the current pair's sync history (kept as snapshot.before-fresh-start),

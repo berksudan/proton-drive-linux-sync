@@ -23,8 +23,7 @@ SANDBOX_PARENT = REPO_DIR / "tests" / "sandboxes"
 SYNC_TIMEOUT_SECONDS = 300
 LOG_COLUMN_COUNT = 5
 
-_REPO_ENTRIES_NOT_COPIED = frozenset({".git", ".agents", "logs", "state", "tests"})
-_CONFIG_FILES_COPIED = frozenset({"settings.example.yaml"})
+_TEST_SUITE_FOLDER = "tests/"
 
 _STUB_SCRIPTS = {
     "systemctl": 'echo "$*" >> "$STUB_LOG_DIR/systemctl.calls"\n',
@@ -87,12 +86,24 @@ def _field_value(raw: object) -> object:
     return raw
 
 
-def _repo_entries_not_copied(directory: str, names: list[str]) -> set[str]:
-    if pathlib.Path(directory).resolve() == REPO_DIR:
-        return {name for name in names if name in _REPO_ENTRIES_NOT_COPIED}
-    if pathlib.Path(directory).resolve() == REPO_DIR / "config":
-        return {name for name in names if name not in _CONFIG_FILES_COPIED}
-    return set()
+def _repo_files_to_copy() -> list[str]:
+    listed = subprocess.run(
+        ["git", "-C", str(REPO_DIR), "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return [path for path in listed.stdout.split("\0") if path != "" and not path.startswith(_TEST_SUITE_FOLDER)]
+
+
+def _copy_repo(*, destination: pathlib.Path) -> None:
+    for relative in _repo_files_to_copy():
+        source = REPO_DIR / relative
+        if not source.is_file():
+            continue
+        target = destination / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
 
 
 def _run_proton(*args: str) -> str:
@@ -214,6 +225,10 @@ class Sandbox:
         return self.root / "data"
 
     @property
+    def state_home(self) -> pathlib.Path:
+        return self.root / "state"
+
+    @property
     def stub_dir(self) -> pathlib.Path:
         return self.root / "stubs"
 
@@ -239,11 +254,11 @@ class Sandbox:
 
     @property
     def state_root(self) -> pathlib.Path:
-        return self.repo / "state"
+        return self.state_home / "proton-drive-sync"
 
     @property
     def run_log(self) -> pathlib.Path:
-        return self.repo / "logs" / "runs.log"
+        return self.state_root / "runs.log"
 
     @property
     def unit_dir(self) -> pathlib.Path:
@@ -258,11 +273,12 @@ class Sandbox:
         return self.data_home / "applications" / "proton-drive-sync.desktop"
 
     def env(self) -> dict[str, str]:
-        base = {key: value for key, value in os.environ.items() if key not in ("NO_COLOR", "PROTON_SYNC_CONFIG", "PROTON_SYNC_DRY_RUN")}
+        base = {key: value for key, value in os.environ.items() if key not in ("NO_COLOR", "PROTON_SYNC_DRY_RUN")}
         return base | {
             "HOME": str(self.home),
             "XDG_CONFIG_HOME": str(self.config_home),
             "XDG_DATA_HOME": str(self.data_home),
+            "XDG_STATE_HOME": str(self.state_home),
             "STUB_LOG_DIR": str(self.stub_log_dir),
             "PATH": str(self.stub_dir) + ":" + os.environ["PATH"],
         }
@@ -383,8 +399,8 @@ def stop_process_group(process: subprocess.Popen[str]) -> str:
 def create_sandbox(*, name: str) -> Sandbox:
     SANDBOX_PARENT.mkdir(parents=True, exist_ok=True)
     sandbox = Sandbox(root=pathlib.Path(tempfile.mkdtemp(prefix=name + "-", dir=SANDBOX_PARENT)))
-    shutil.copytree(REPO_DIR, sandbox.repo, ignore=_repo_entries_not_copied)
-    for folder in (sandbox.home, sandbox.config_home, sandbox.data_home, sandbox.stub_dir, sandbox.stub_log_dir):
+    _copy_repo(destination=sandbox.repo)
+    for folder in (sandbox.home, sandbox.config_home, sandbox.data_home, sandbox.state_home, sandbox.stub_dir, sandbox.stub_log_dir):
         folder.mkdir(parents=True, exist_ok=True)
     for stub_name, body in _STUB_SCRIPTS.items():
         stub_file = sandbox.stub_dir / stub_name

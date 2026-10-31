@@ -98,11 +98,10 @@ background_path() {
 
 # Environment variables to pass on to background runs.
 background_env() {
-    local var
     echo "PATH=$(background_path)"
-    for var in XDG_CONFIG_HOME XDG_DATA_HOME PROTON_SYNC_CONFIG; do
-        [ -n "${!var:-}" ] && echo "$var=${!var}"
-    done
+    if [ -n "${XDG_STATE_HOME:-}" ]; then
+        echo "XDG_STATE_HOME=$XDG_STATE_HOME"
+    fi
 }
 
 build_cron_entry() {
