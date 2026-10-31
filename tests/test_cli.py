@@ -124,10 +124,17 @@ class RunLogViewTests(_OfflineTestCase):
                 self.assertEqual(len(lines), expected_count)
                 self.assertTrue(lines[0].startswith(expected_first))
 
-    def test_log_colours_status_and_trigger_in_a_terminal(self) -> None:
+    def test_log_colours_status_trigger_and_paths_in_a_terminal(self) -> None:
         self.write_run_log(_LOG_ROWS)
         output = self.sandbox.run("--log", tty=True).stdout
-        for coloured in ("\x1b[32mOK", "\x1b[1;31mERROR", "\x1b[36mCONTINUOUS", "\x1b[35mMANUAL_MENU", "\x1b[2m2026-10-31"):
+        for coloured in (
+            "\x1b[32mOK",
+            "\x1b[1;31mERROR",
+            "\x1b[36mCONTINUOUS",
+            "\x1b[35mMANUAL_MENU",
+            "\x1b[2m2026-10-31",
+            "\x1b[1m/tmp/a\x1b[0m \x1b[2m<>\x1b[0m \x1b[1m/my-files/a\x1b[0m",
+        ):
             self.assertIn(coloured, output)
 
     def test_no_color_turns_colours_off_in_a_terminal(self) -> None:

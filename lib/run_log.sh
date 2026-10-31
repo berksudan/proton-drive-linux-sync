@@ -44,7 +44,7 @@ show_run_log() {
     tail "${tail_args[@]}" "$RUN_LOG" | awk -F '\t' -v color="$color" '
         BEGIN {
             if (color == "true") {
-                dim = "\033[2m"; reset = "\033[0m"
+                dim = "\033[2m"; reset = "\033[0m"; path_color = "\033[1m"
                 status_color["OK"] = "\033[32m"
                 status_color["CONFLICT"] = "\033[1;33m"
                 status_color["ERROR"] = "\033[1;31m"
@@ -56,8 +56,13 @@ show_run_log() {
             }
         }
         {
+            pair = $4
+            if (match($4, / (<>|->|<-) /)) {
+                pair = path_color substr($4, 1, RSTART - 1) reset " " dim substr($4, RSTART + 1, RLENGTH - 2) reset \
+                    " " path_color substr($4, RSTART + RLENGTH) reset
+            }
             printf "%s%s%s  %s%-8s%s  %s%-18s%s  %s  %s\n", dim, $1, reset, status_color[$2], $2, reset, \
-                trigger_color[$3], $3, reset, $4, $5
+                trigger_color[$3], $3, reset, pair, $5
             fflush()
         }'
 }
