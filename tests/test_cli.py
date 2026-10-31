@@ -154,26 +154,26 @@ class AutomaticSyncScheduleTests(_OfflineTestCase):
             with self.subTest(kind=kind):
                 completed = self.sandbox.run("--schedule", kind)
                 self.assertEqual(completed.returncode, 0, completed.stderr)
-                self.assertRegex(self.unit_text("proton-drive-sync.timer"), re.compile(calendar_pattern, re.MULTILINE))
-                service = self.unit_text("proton-drive-sync.service")
+                self.assertRegex(self.unit_text("proton-drive-linux-sync.timer"), re.compile(calendar_pattern, re.MULTILINE))
+                service = self.unit_text("proton-drive-linux-sync.service")
                 self.assertIn(str(self.sandbox.script), service)
                 self.assertRegex(service, re.compile(r"^ExecStart=.* --headless$", re.MULTILINE))
-                self.assertFalse((self.sandbox.unit_dir / "proton-drive-sync-watch.service").exists())
+                self.assertFalse((self.sandbox.unit_dir / "proton-drive-linux-sync-watch.service").exists())
                 self.assertIn("Automatic sync:  " + status_text, self.sandbox.run("--status").stdout)
-                self.assertIn("--user enable --now proton-drive-sync.timer", self.sandbox.stub_calls("systemctl"))
+                self.assertIn("--user enable --now proton-drive-linux-sync.timer", self.sandbox.stub_calls("systemctl"))
 
     def test_continuous_schedule_writes_only_the_watch_service(self) -> None:
         self.sandbox.run("--schedule", "hourly")
         completed = self.sandbox.run("--schedule", "watch")
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("Automatic sync: continuous (using systemd)", completed.stdout)
-        watch_unit = self.unit_text("proton-drive-sync-watch.service")
+        watch_unit = self.unit_text("proton-drive-linux-sync-watch.service")
         self.assertRegex(watch_unit, re.compile(r"^ExecStart=.* --watch$", re.MULTILINE))
         self.assertIn('Environment="XDG_STATE_HOME=' + str(self.sandbox.state_home) + '"', watch_unit)
         self.assertNotIn("XDG_CONFIG_HOME", watch_unit)
-        self.assertFalse((self.sandbox.unit_dir / "proton-drive-sync.timer").exists())
-        self.assertFalse((self.sandbox.unit_dir / "proton-drive-sync.service").exists())
-        self.assertIn("--user enable --now proton-drive-sync-watch.service", self.sandbox.stub_calls("systemctl"))
+        self.assertFalse((self.sandbox.unit_dir / "proton-drive-linux-sync.timer").exists())
+        self.assertFalse((self.sandbox.unit_dir / "proton-drive-linux-sync.service").exists())
+        self.assertIn("--user enable --now proton-drive-linux-sync-watch.service", self.sandbox.stub_calls("systemctl"))
         self.assertIn("Automatic sync:  continuous (systemd)", self.sandbox.run("--status").stdout)
 
     def test_off_removes_every_unit(self) -> None:
@@ -202,7 +202,7 @@ class InstallTests(_OfflineTestCase):
         self.sandbox.run("--schedule", "watch")
         completed = self.sandbox.run("--install")
         self.assertIn("Automatic sync (continuous) now runs " + str(self.sandbox.installed_command) + ".", completed.stdout)
-        watch_unit = (self.sandbox.unit_dir / "proton-drive-sync-watch.service").read_text()
+        watch_unit = (self.sandbox.unit_dir / "proton-drive-linux-sync-watch.service").read_text()
         self.assertIn('"' + str(self.sandbox.installed_command) + '" --watch', watch_unit)
 
     def test_uninstall_removes_command_launcher_and_automatic_sync_that_uses_it(self) -> None:
@@ -213,7 +213,7 @@ class InstallTests(_OfflineTestCase):
         self.assertIn("Turned off automatic sync (it used " + str(self.sandbox.installed_command) + ").", completed.stdout)
         self.assertFalse(self.sandbox.installed_command.is_symlink())
         self.assertFalse(self.sandbox.desktop_file.exists())
-        self.assertFalse((self.sandbox.unit_dir / "proton-drive-sync-watch.service").exists())
+        self.assertFalse((self.sandbox.unit_dir / "proton-drive-linux-sync-watch.service").exists())
         self.assertTrue(self.sandbox.config_file.exists())
         self.assertTrue(self.sandbox.script.exists())
 
@@ -228,7 +228,7 @@ class SetupScriptTests(_OfflineTestCase):
         self.assertTrue(
             any("apt-get install -y -qq dialog inotify-tools jq libnotify-bin yq" in call for call in self.sandbox.stub_calls("sudo"))
         )
-        watch_unit = (self.sandbox.unit_dir / "proton-drive-sync-watch.service").read_text()
+        watch_unit = (self.sandbox.unit_dir / "proton-drive-linux-sync-watch.service").read_text()
         self.assertIn('"' + str(self.sandbox.installed_command) + '" --watch', watch_unit)
         self.assertEqual(self.sandbox.installed_command.resolve(), self.sandbox.script.resolve())
         rerun = self.sandbox.run(script=self.sandbox.repo / "scripts" / "setup.sh")

@@ -270,7 +270,7 @@ class Sandbox:
 
     @property
     def state_root(self) -> pathlib.Path:
-        return self.state_home / "proton-drive-sync"
+        return self.state_home / "proton-drive-linux-sync"
 
     @property
     def run_log(self) -> pathlib.Path:
@@ -282,11 +282,11 @@ class Sandbox:
 
     @property
     def installed_command(self) -> pathlib.Path:
-        return self.home / ".local" / "bin" / "proton-drive-sync"
+        return self.home / ".local" / "bin" / "proton-drive-linux-sync"
 
     @property
     def desktop_file(self) -> pathlib.Path:
-        return self.data_home / "applications" / "proton-drive-sync.desktop"
+        return self.data_home / "applications" / "proton-drive-linux-sync.desktop"
 
     def env(self) -> dict[str, str]:
         base = {key: value for key, value in os.environ.items() if key not in ("NO_COLOR", "PROTON_SYNC_DRY_RUN")}

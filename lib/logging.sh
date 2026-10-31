@@ -23,7 +23,7 @@ notify() {
     if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -S "$bus" ]; then
         export DBUS_SESSION_BUS_ADDRESS="unix:path=$bus"
     fi
-    notify-send -a "Proton Drive Sync" -u "$1" "$2" "$3" >/dev/null 2>&1 || true
+    notify-send -a "Proton Drive Linux Sync" -u "$1" "$2" "$3" >/dev/null 2>&1 || true
 }
 
 rotate_log() {

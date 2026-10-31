@@ -5,14 +5,14 @@
 # --status: what's configured and how the last syncs went (no network).
 print_status() {
     local i
-    echo "Proton Drive Sync"
+    echo "Proton Drive Linux Sync"
     echo "Settings:        $CONFIG_FILE"
     echo "Automatic sync:  $(schedule_text)$( [ -n "$(schedule_backend)" ] && echo " ($(schedule_backend))")"
     if [ -d "$LOCK_FILE" ] && ! lock_is_stale; then
         echo "Sync running:    yes"
     fi
     echo
-    [ "$(pair_count)" -eq 0 ] && echo "No folder pairs set up, so nothing is synced. Add one with: proton-drive-sync (Folder pairs)"
+    [ "$(pair_count)" -eq 0 ] && echo "No folder pairs set up, so nothing is synced. Add one with: proton-drive-linux-sync (Folder pairs)"
     for i in "${!PAIR_LOCAL[@]}"; do
         echo "$((i + 1)). $(pair_label "$i")"
         echo "   Mode:       $(mode_label "${PAIR_MODE[$i]}")"
@@ -42,8 +42,8 @@ Usage: $(basename "$0") [OPTIONS]
                    showing new runs until stopped.
   --schedule KIND  Set automatic sync without the menu, then exit. KIND is
                    off, hourly, six (every 6 hours), daily or watch (continuous).
-  --install        Link ~/.local/bin/proton-drive-sync to this script and add a
-                   desktop launcher. Settings stay next to it in config/.
+  --install        Link ~/.local/bin/proton-drive-linux-sync to this script and
+                   add a desktop launcher. Settings stay next to it in config/.
   --uninstall      Remove that link and the launcher (keeps your settings
                    and sync history).
   --help           Show this help.

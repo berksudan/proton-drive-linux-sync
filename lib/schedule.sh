@@ -2,11 +2,11 @@
 # AUTOMATIC SYNC (systemd user timer / service, or cron)
 # ============================================================
 
-CRON_MARKER="# proton-drive-sync"
+CRON_MARKER="# proton-drive-linux-sync"
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
-TIMER_UNIT="proton-drive-sync.timer"
-SERVICE_UNIT="proton-drive-sync.service"
-WATCH_UNIT="proton-drive-sync-watch.service"
+TIMER_UNIT="proton-drive-linux-sync.timer"
+SERVICE_UNIT="proton-drive-linux-sync.service"
+WATCH_UNIT="proton-drive-linux-sync-watch.service"
 
 systemd_available() {
     command -v systemctl >/dev/null 2>&1 && systemctl --user show-environment >/dev/null 2>&1
@@ -139,7 +139,7 @@ write_systemd_units() {
     if [ "$kind" = watch ]; then
         cat > "$UNIT_DIR/$WATCH_UNIT" <<UNIT
 [Unit]
-Description=Proton Drive Sync (continuous)
+Description=Proton Drive Linux Sync (continuous)
 After=network-online.target
 
 [Service]
@@ -160,7 +160,7 @@ UNIT
     esac
     cat > "$UNIT_DIR/$SERVICE_UNIT" <<UNIT
 [Unit]
-Description=Proton Drive Sync
+Description=Proton Drive Linux Sync
 After=network-online.target
 
 [Service]
@@ -169,7 +169,7 @@ ${env_lines}ExecStart=$(command -v bash) $(sd_quote "$SCRIPT_PATH") --headless
 UNIT
     cat > "$UNIT_DIR/$TIMER_UNIT" <<UNIT
 [Unit]
-Description=Proton Drive Sync schedule
+Description=Proton Drive Linux Sync schedule
 
 [Timer]
 OnCalendar=$cal

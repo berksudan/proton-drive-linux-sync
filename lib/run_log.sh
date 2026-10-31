@@ -28,7 +28,7 @@ append_run_log() {
         && printf '%s\t%s\t%s\t%s\t%s\n' "$(date '+%F %T')" "$(run_status "$1")" "$(run_trigger)" \
             "$(pair_label "$CURRENT_PAIR")" "$1" >> "$RUN_LOG"; }; then
         log "[ERROR] Couldn't write the run log $RUN_LOG"
-        notify normal "Proton Drive Sync" "Couldn't write the run log $RUN_LOG"
+        notify normal "Proton Drive Linux Sync" "Couldn't write the run log $RUN_LOG"
     fi
 }
 

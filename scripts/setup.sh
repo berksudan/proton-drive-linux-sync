@@ -36,7 +36,7 @@ create_settings_from_example() {
         echo "Keeping $REPO_DIR/config/settings.yaml"
     else
         cp "$REPO_DIR/config/settings.example.yaml" "$REPO_DIR/config/settings.yaml"
-        echo "Created $REPO_DIR/config/settings.yaml with no folder pairs; add them with: proton-drive-sync"
+        echo "Created $REPO_DIR/config/settings.yaml with no folder pairs; add them with: proton-drive-linux-sync"
     fi
 }
 
@@ -56,6 +56,6 @@ print_step "[2/4] Creating settings"
 create_settings_from_example
 print_step "[3/4] Turning on continuous sync"
 enable_continuous_sync
-print_step "[4/4] Installing the proton-drive-sync command"
+print_step "[4/4] Installing the proton-drive-linux-sync command"
 install_sync_command
-print_step "Setup done. Settings: $REPO_DIR/config/settings.yaml. Recent syncs: proton-drive-sync --log"
+print_step "Setup done. Settings: $REPO_DIR/config/settings.yaml. Recent syncs: proton-drive-linux-sync --log"

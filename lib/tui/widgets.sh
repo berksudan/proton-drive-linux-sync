@@ -3,7 +3,7 @@
 # ============================================================
 
 UI_TOOL=""
-UI_BACKTITLE="Proton Drive Sync"
+UI_BACKTITLE="Proton Drive Linux Sync"
 AUTH_STATE=unknown     # in | out | unknown
 
 # Use $PROTON_SYNC_UI if set, else dialog, else whiptail.

@@ -21,7 +21,7 @@ headless_sync() {
     if ! is_authenticated; then
         release_lock
         record_result "Stopped: not logged in to Proton Drive"
-        notify critical "Proton Drive Sync stopped" "Not logged in to Proton Drive. Run: proton-drive auth login"
+        notify critical "Proton Drive Linux Sync stopped" "Not logged in to Proton Drive. Run: proton-drive auth login"
         echo "ERROR: Cannot access $REMOTE_DIR — are you logged in?" >&2
         echo "Run: proton-drive auth login" >&2
         return 1
@@ -48,7 +48,7 @@ headless_sync() {
             local n
             n=$(wc -l < "$PENDING_DELETES")
             record_result "Stopped: $n deletions need confirmation"
-            notify critical "Proton Drive Sync stopped" "$label: $n files would be deleted. Open the menu and choose Sync now to review them."
+            notify critical "Proton Drive Linux Sync stopped" "$label: $n files would be deleted. Open the menu and choose Sync now to review them."
             echo >&2
             echo "Files that would be deleted:" >&2
             head -20 "$PENDING_DELETES" | sed 's/^/  /' >&2
@@ -58,7 +58,7 @@ headless_sync() {
             echo "  $SCRIPT_PATH --headless --allow-deletes" >&2
         elif [ "$rc" -eq 4 ]; then
             record_result "Stopped: local folder is $EMPTY_LOCAL"
-            notify critical "Proton Drive Sync stopped" "$label: the local folder is $EMPTY_LOCAL. Connect the drive, or open the menu to download everything again."
+            notify critical "Proton Drive Linux Sync stopped" "$label: the local folder is $EMPTY_LOCAL. Connect the drive, or open the menu to download everything again."
             echo >&2
             echo "If the folder is on a drive that isn't connected, connect it and sync again." >&2
             echo "To download everything from Proton again (start fresh), run:" >&2
@@ -66,7 +66,7 @@ headless_sync() {
             echo "If you deleted everything on purpose, run a sync from the menu." >&2
         else
             record_result "Stopped: $ABORT_REASON"
-            notify critical "Proton Drive Sync stopped" "$label: $ABORT_REASON"
+            notify critical "Proton Drive Linux Sync stopped" "$label: $ABORT_REASON"
         fi
         echo "Log: $LOG_FILE" >&2
         return 1
@@ -98,9 +98,9 @@ headless_sync() {
             echo "  ($COUNT_CONFLICTS conflict(s) left unresolved; sync from the menu to resolve them)"
         fi
         if [ "$COUNT_ERRORS" -gt 0 ]; then
-            notify normal "Proton Drive Sync had problems" "$label: $result"
+            notify normal "Proton Drive Linux Sync had problems" "$label: $result"
         elif [ "$CONFLICT_STRATEGY" = "skip" ] && [ "$COUNT_CONFLICTS" -gt 0 ]; then
-            notify normal "Proton Drive Sync: conflicts" "$label: $COUNT_CONFLICTS file(s) changed on both sides. Open the menu and choose Sync now to resolve them."
+            notify normal "Proton Drive Linux Sync: conflicts" "$label: $COUNT_CONFLICTS file(s) changed on both sides. Open the menu and choose Sync now to resolve them."
         elif [ "$NOTIFY" = changes ] && [ "$result" != "no changes, no errors" ]; then
             notify low "Proton Drive synced" "$label: $result"
         fi
@@ -118,7 +118,7 @@ headless_run() {
     local -a pairs=("${!PAIR_LOCAL[@]}")
     [ -n "$ONLY_PAIR" ] && pairs=("$ONLY_PAIR")
     if [ "${#pairs[@]}" -eq 0 ]; then
-        echo "No folder pairs set up, so there is nothing to sync. Add one with: proton-drive-sync (Folder pairs)"
+        echo "No folder pairs set up, so there is nothing to sync. Add one with: proton-drive-linux-sync (Folder pairs)"
         return 0
     fi
     for i in "${pairs[@]}"; do

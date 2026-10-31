@@ -2,8 +2,8 @@
 # INSTALL / UNINSTALL
 # ============================================================
 
-INSTALL_PATH="$HOME/.local/bin/proton-drive-sync"
-DESKTOP_FILE="${XDG_DATA_HOME:-$HOME/.local/share}/applications/proton-drive-sync.desktop"
+INSTALL_PATH="$HOME/.local/bin/proton-drive-linux-sync"
+DESKTOP_FILE="${XDG_DATA_HOME:-$HOME/.local/share}/applications/proton-drive-linux-sync.desktop"
 
 install_script() {
     local kind
@@ -12,7 +12,7 @@ install_script() {
     cat > "$DESKTOP_FILE" <<DESKTOP
 [Desktop Entry]
 Type=Application
-Name=Proton Drive Sync
+Name=Proton Drive Linux Sync
 Comment=Sync folders with Proton Drive
 Exec="$INSTALL_PATH"
 Terminal=true
@@ -36,7 +36,7 @@ DESKTOP
             ;;
     esac
     case ":$PATH:" in
-        *":$(dirname "$INSTALL_PATH"):"*) echo "Run it with: proton-drive-sync" ;;
+        *":$(dirname "$INSTALL_PATH"):"*) echo "Run it with: proton-drive-linux-sync" ;;
         *) echo "Note: $(dirname "$INSTALL_PATH") isn't in your PATH; run it as $INSTALL_PATH" ;;
     esac
 }

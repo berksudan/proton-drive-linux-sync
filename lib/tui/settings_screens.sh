@@ -122,7 +122,7 @@ Logs:          $LOG_DIR
 Local trash:   $TRASH_DIR
 
 Automatic sync output: $STATE_ROOT/cron.log (cron), or
-  journalctl --user -u proton-drive-sync (systemd)
+  journalctl --user -u proton-drive-linux-sync (systemd)
 
 Each folder pair has its own history, logs and trash."
 }

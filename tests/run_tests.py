@@ -26,7 +26,7 @@ class _ProtonTestResult:
 
 
 def _parse_arguments() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the proton-drive-sync test suite against the repo script.")
+    parser = argparse.ArgumentParser(description="Run the proton-drive-linux-sync test suite against the repo script.")
     parser.add_argument("--offline", action="store_true", help="run only tests that don't touch Proton Drive")
     parser.add_argument("-k", dest="patterns", action="append", default=[], help="only run tests matching this substring")
     parser.add_argument("--jobs", type=int, default=_DEFAULT_JOBS, help="Proton tests run at the same time (default: 6)")
