@@ -35,13 +35,6 @@ append_run_log() {
 show_run_log() {
     local follow="$1" color=false
     local -a tail_args=(-n 20)
-    local run_log_dir
-    run_log_dir=$(dirname "$RUN_LOG")
-    if [ -L "$run_log_dir" ] && [ ! -e "$run_log_dir" ]; then
-        echo "ERROR: $run_log_dir links to $(readlink "$run_log_dir"), which doesn't exist." >&2
-        echo "If you moved the repo, run scripts/setup.sh from its new location." >&2
-        return 1
-    fi
     if [ ! -f "$RUN_LOG" ]; then
         echo "No runs logged yet ($RUN_LOG)."
         return 0

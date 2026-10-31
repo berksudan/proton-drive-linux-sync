@@ -2,7 +2,8 @@
 set -uo pipefail
 
 SCRIPT_PATH=$(readlink -f "${BASH_SOURCE[0]}")
-LIB_DIR="$(dirname "$SCRIPT_PATH")/lib"
+APP_DIR=$(dirname "$SCRIPT_PATH")
+LIB_DIR="$APP_DIR/lib"
 
 MODULES=(
     settings pairs state logging run_log lock execution local_files proton

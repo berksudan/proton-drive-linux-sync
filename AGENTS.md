@@ -8,14 +8,15 @@
 - `lib/`: one module per concern: `settings`, `pairs`, `state`, `logging`, `run_log`, `lock`, `execution`, `local_files`, `proton` (all `proton-drive` CLI calls), `conflicts`, `transfers`, `plan`, `engine` (`sync_engine`), `text`, `schedule`, `headless`, `watch`, `install`, `cli`.
 - `lib/tui/`: the interactive menu (dialog or whiptail): `widgets` and one file per screen group, ending with `main_menu`.
 - A new module loads only once it is added to `MODULES` in `proton-sync-tui.sh`.
-- `scripts/setup.sh`: machine setup: apt packages, run-log link, continuous sync, then `--install`.
-- `logs/runs.log`: one line per sync run, gitignored; `scripts/setup.sh` (`link_run_logs_into_repo`) links the script's `run-logs` folder here.
+- `scripts/setup.sh`: machine setup: apt packages, continuous sync, then `--install`.
+- `config/config`: settings and folder pairs (`CONFIG_FILE`, read by `load_config`, written by `save_config`), gitignored.
+- `logs/runs.log`: one line per sync run (`RUN_LOG`), gitignored.
 - `LICENSE`: upstream MIT notice; keep it with the code.
 
 ## Runtime
 
-- Background sync runs the installed copy, not the repo files: `--install` (`install_program_files`) copies `proton-sync-tui.sh` and `lib/` to `~/.local/share/proton-drive-sync` (`INSTALL_DIR`) and links `~/.local/bin/proton-drive-sync` (`INSTALL_PATH`) to it; run `./proton-sync-tui.sh --install` after editing to update it and restart automatic sync.
-- Settings and folder pairs live in `~/.config/proton-sync/config` (`CONFIG_FILE`, written by `save_config`), outside the repo.
+- `--install` (`install_script`) links `~/.local/bin/proton-drive-sync` (`INSTALL_PATH`) to this repo's `proton-sync-tui.sh`, so background sync runs the repo files, uncommitted edits included, from its next restart; run `./proton-sync-tui.sh --install` to restart automatic sync on purpose.
+- `config/` and `logs/` are found next to the script (`APP_DIR`), so moving or deleting the repo breaks the installed command and automatic sync until `scripts/setup.sh` runs from the new location.
 - Sync state and detailed per-run logs live in `~/.local/share/proton-sync` (`STATE_ROOT`).
 - `scripts/setup.sh` turns on continuous sync (`--schedule watch`), a systemd user service written by `write_systemd_units`.
 

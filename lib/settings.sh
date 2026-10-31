@@ -42,10 +42,10 @@ EXCLUDE_PATTERNS=(
 # FILE LOCATIONS
 # ============================================================
 
-CONFIG_FILE="${PROTON_SYNC_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/proton-sync/config}"
+CONFIG_FILE="${PROTON_SYNC_CONFIG:-$APP_DIR/config/config}"
 STATE_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/proton-sync"
 LOCK_FILE="$STATE_ROOT/sync.lock"
-RUN_LOG="$STATE_ROOT/run-logs/runs.log"
+RUN_LOG="$APP_DIR/logs/runs.log"
 
 # Field separator for manifests, snapshot and conflict list. The ASCII unit
 # separator can't realistically appear in a filename, unlike "|".

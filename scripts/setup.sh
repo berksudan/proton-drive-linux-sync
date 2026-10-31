@@ -2,8 +2,7 @@
 set -euo pipefail
 
 REPO_DIR=$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")
-STATE_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/proton-sync"
-APT_PACKAGES=(dialog inotify-tools jq libnotify-bin)
+APT_PACKAGES=(dialog inotify-tools jq libnotify-bin yq)
 
 print_step() {
     printf '\n\033[1m%s\033[0m\n' "$1"
@@ -32,12 +31,6 @@ install_apt_packages() {
     run_as_root apt-get install -y -qq "${APT_PACKAGES[@]}"
 }
 
-link_run_logs_into_repo() {
-    mkdir -p "$REPO_DIR/logs" "$STATE_ROOT"
-    ln -sfnT "$REPO_DIR/logs" "$STATE_ROOT/run-logs"
-    echo "Run log: $REPO_DIR/logs/runs.log"
-}
-
 enable_continuous_sync() {
     "$REPO_DIR/proton-sync-tui.sh" --schedule watch
 }
@@ -48,12 +41,10 @@ install_sync_command() {
 
 ensure_not_root
 ensure_proton_cli
-print_step "[1/4] Installing system packages"
+print_step "[1/3] Installing system packages"
 install_apt_packages
-print_step "[2/4] Keeping the run log in this repo"
-link_run_logs_into_repo
-print_step "[3/4] Turning on continuous sync"
+print_step "[2/3] Turning on continuous sync"
 enable_continuous_sync
-print_step "[4/4] Installing the proton-drive-sync command"
+print_step "[3/3] Installing the proton-drive-sync command"
 install_sync_command
-print_step "Setup done. Add folders and change settings with: proton-drive-sync"
+print_step "Setup done. Settings: $REPO_DIR/config/config, run log: $REPO_DIR/logs/runs.log"
