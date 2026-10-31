@@ -38,8 +38,9 @@ Usage: $(basename "$0") [OPTIONS]
   --watch          Continuous sync: sync local changes within seconds and
                    check Proton regularly. Runs until stopped.
   --status         Show folder pairs, last results and automatic sync, then exit.
-  --log [-f]       Show the last 20 sync runs from the run log; -f keeps
-                   showing new runs until stopped.
+  --log [-n N] [-f]
+                   Show the last N sync runs from the run log (default 20);
+                   -f keeps showing new runs until stopped.
   --schedule KIND  Set automatic sync without the menu, then exit. KIND is
                    off, hourly, six (every 6 hours), daily or watch (continuous).
   --install        Link ~/.local/bin/proton-drive-linux-sync to this script and
@@ -59,6 +60,7 @@ run_cli() {
     ONLY_PAIR=""
     SCHEDULE_KIND=""
     FOLLOW=false
+    LOG_LINES=""
     while [ $# -gt 0 ]; do
         case "$1" in
             --headless|--sync) HEADLESS=true ;;
@@ -75,6 +77,11 @@ run_cli() {
             --status) ACTION=status ;;
             --log) ACTION=log ;;
             -f|--follow) FOLLOW=true ;;
+            -n|--lines|--lines=*)
+                if [ "$1" = --lines ] || [ "$1" = -n ]; then shift; LOG_LINES="${1:-}"; else LOG_LINES="${1#--lines=}"; fi
+                if ! is_number "$LOG_LINES" || [ "$LOG_LINES" -lt 1 ]; then
+                    echo "-n needs a number of sync runs to show" >&2; exit 2
+                fi ;;
             --schedule|--schedule=*)
                 if [ "$1" = --schedule ]; then shift; SCHEDULE_KIND="${1:-}"; else SCHEDULE_KIND="${1#--schedule=}"; fi
                 case "$SCHEDULE_KIND" in
@@ -92,6 +99,9 @@ run_cli() {
 
     if [ "$FOLLOW" = true ] && [ "$ACTION" != log ]; then
         echo "-f only works with --log" >&2; exit 2
+    fi
+    if [ -n "$LOG_LINES" ] && [ "$ACTION" != log ]; then
+        echo "-n only works with --log" >&2; exit 2
     fi
 
     load_config
@@ -114,7 +124,7 @@ run_cli() {
 
     case "$ACTION" in
         status)    print_status; exit 0 ;;
-        log)       show_run_log "$FOLLOW"; exit $? ;;
+        log)       show_run_log "$FOLLOW" "${LOG_LINES:-20}"; exit $? ;;
         schedule)  schedule_from_cli "$SCHEDULE_KIND"; exit $? ;;
         install)   install_script; exit $? ;;
         uninstall) uninstall_script; exit $? ;;

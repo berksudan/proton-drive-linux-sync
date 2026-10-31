@@ -41,7 +41,7 @@ class CommandLineTests(_OfflineTestCase):
             "--start-fresh",
             "--watch",
             "--status",
-            "--log [-f]",
+            "--log [-n N] [-f]",
             "--schedule KIND",
             "--install",
             "--uninstall",
@@ -54,6 +54,9 @@ class CommandLineTests(_OfflineTestCase):
             (("--bogus",), "Unknown option: --bogus"),
             (("--schedule", "bogus"), "--schedule needs one of"),
             (("--status", "-f"), "-f only works with --log"),
+            (("--status", "-n", "5"), "-n only works with --log"),
+            (("--log", "-n", "0"), "-n needs a number of sync runs to show"),
+            (("--log", "-n"), "-n needs a number of sync runs to show"),
             (("--headless", "--pair", "0"), "--pair needs a folder pair number"),
             (("--headless", "--pair", "2"), "There is no folder pair 2"),
         ):
@@ -105,14 +108,21 @@ class RunLogViewTests(_OfflineTestCase):
         self.assertTrue(lines[1].startswith("2026-10-31 01:05:00  ERROR"))
         self.assertTrue(lines[1].endswith("1 up, 2 errors"))
 
-    def test_log_shows_only_the_last_twenty_runs(self) -> None:
+    def test_log_shows_the_last_twenty_runs_or_the_last_n(self) -> None:
         rows = "".join(
             "2026-10-31 01:" + str(minute).zfill(2) + ":00\tOK\tCONTINUOUS\tp\tno changes, no errors\n" for minute in range(30)
         )
         self.write_run_log(rows)
-        lines = self.sandbox.run("--log").stdout.splitlines()
-        self.assertEqual(len(lines), 20)
-        self.assertTrue(lines[0].startswith("2026-10-31 01:10:00"))
+        for args, expected_count, expected_first in (
+            (("--log",), 20, "2026-10-31 01:10:00"),
+            (("--log", "-n", "25"), 25, "2026-10-31 01:05:00"),
+            (("--log", "--lines=5"), 5, "2026-10-31 01:25:00"),
+            (("--log", "-n", "100"), 30, "2026-10-31 01:00:00"),
+        ):
+            with self.subTest(args=args):
+                lines = self.sandbox.run(*args).stdout.splitlines()
+                self.assertEqual(len(lines), expected_count)
+                self.assertTrue(lines[0].startswith(expected_first))
 
     def test_log_colours_status_and_trigger_in_a_terminal(self) -> None:
         self.write_run_log(_LOG_ROWS)

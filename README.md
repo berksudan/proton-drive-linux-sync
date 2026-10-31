@@ -46,7 +46,7 @@ Continuous sync takes over from there.
 ```bash
 proton-drive-linux-sync              # open the menu
 proton-drive-linux-sync --status     # show folder pairs, last results and automatic sync
-proton-drive-linux-sync --log        # show the last 20 sync runs
+proton-drive-linux-sync --log        # show the last 20 sync runs (-n 100 for more)
 proton-drive-linux-sync --dry-run    # show what a sync would change, without changing anything
 proton-drive-linux-sync --headless   # sync every folder pair without the menu
 proton-drive-linux-sync --help       # list every option

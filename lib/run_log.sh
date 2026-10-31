@@ -33,8 +33,8 @@ append_run_log() {
 }
 
 show_run_log() {
-    local follow="$1" color=false
-    local -a tail_args=(-n 20)
+    local follow="$1" lines="$2" color=false
+    local -a tail_args=(-n "$lines")
     if [ ! -f "$RUN_LOG" ]; then
         echo "No runs logged yet ($RUN_LOG)."
         return 0
