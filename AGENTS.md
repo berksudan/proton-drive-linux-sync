@@ -18,7 +18,7 @@
 
 ## Sync Run Log
 
-- Show recent sync runs with `proton-drive-sync --log`: the last 20 lines of `logs/runs.log` as time, status (`OK`, `CONFLICT`, `ERROR`, `STOPPED`), trigger (`CONTINUOUS` continuous sync, `HEADLESS` timer, cron or manual `--headless`, `MENU` menu sync), folder pair and result (`show_run_log`, `run_status`, `run_trigger`).
+- Show recent sync runs with `proton-drive-sync --log`: the last 20 lines of `logs/runs.log` as time, status (`OK`, `CONFLICT`, `ERROR`, `STOPPED`), trigger (`CONTINUOUS` continuous sync, `SCHEDULED_HEADLESS` timer or cron, `MANUAL_HEADLESS` `--headless` run from a terminal, `MANUAL_MENU` menu sync), folder pair and result (`show_run_log`, `run_status`, `run_trigger`).
 - `proton-drive-sync --log -f` follows new sync runs until stopped, so give it to the user instead of running it.
 
 ## Checks

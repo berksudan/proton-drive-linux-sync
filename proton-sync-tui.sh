@@ -1351,8 +1351,9 @@ run_status() {
 
 run_trigger() {
     if [ "$ACTION" = watch ]; then echo CONTINUOUS
-    elif [ "$HEADLESS" = true ]; then echo HEADLESS
-    else echo MENU
+    elif [ "$HEADLESS" = true ] && [ -t 0 ]; then echo MANUAL_HEADLESS
+    elif [ "$HEADLESS" = true ]; then echo SCHEDULED_HEADLESS
+    else echo MANUAL_MENU
     fi
 }
 
@@ -1390,12 +1391,13 @@ show_run_log() {
                 status_color["ERROR"] = "\033[1;31m"
                 status_color["STOPPED"] = "\033[1;31m"
                 trigger_color["CONTINUOUS"] = "\033[36m"
-                trigger_color["HEADLESS"] = "\033[34m"
-                trigger_color["MENU"] = "\033[35m"
+                trigger_color["SCHEDULED_HEADLESS"] = "\033[34m"
+                trigger_color["MANUAL_HEADLESS"] = "\033[35m"
+                trigger_color["MANUAL_MENU"] = "\033[35m"
             }
         }
         {
-            printf "%s%s%s  %s%-8s%s  %s%-10s%s  %s  %s\n", dim, $1, reset, status_color[$2], $2, reset, \
+            printf "%s%s%s  %s%-8s%s  %s%-18s%s  %s  %s\n", dim, $1, reset, status_color[$2], $2, reset, \
                 trigger_color[$3], $3, reset, $4, $5
             fflush()
         }'
