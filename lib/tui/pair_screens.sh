@@ -118,14 +118,8 @@ Add this folder pair anyway?" "Add anyway" "Cancel" || return
 $(pair_history_note "$loc" "$rem")
 
 Use this folder pair in the menu now?" "Use it" "Not now"; then
-        use_pair "$n"
+        select_pair "$n"
     fi
-}
-
-use_pair() {
-    select_pair "$1"
-    CFG_CURRENT_PAIR="$1"
-    save_config
 }
 
 pair_menu() {
@@ -145,7 +139,7 @@ pair_menu() {
 Last sync: $(pair_last_sync "$i")" "Back" "$choice" "${items[@]}") || return
         case "$choice" in
             use)
-                use_pair "$i"
+                select_pair "$i"
                 return
                 ;;
             local|remote)
@@ -219,7 +213,6 @@ remove_pair() {
         cur=$((cur - 1))
     fi
     select_pair "$cur"
-    CFG_CURRENT_PAIR="$cur"
     save_config
 }
 

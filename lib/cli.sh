@@ -110,7 +110,7 @@ run_cli() {
         echo "There is no folder pair $((ONLY_PAIR + 1)); there are $(pair_count) (see --status)." >&2
         exit 2
     fi
-    [ "$(pair_count)" -gt 0 ] && select_pair "${ONLY_PAIR:-$CURRENT_PAIR}"
+    [ "$(pair_count)" -gt 0 ] && select_pair "${ONLY_PAIR:-0}"
 
     case "$ACTION" in
         status)    print_status; exit 0 ;;

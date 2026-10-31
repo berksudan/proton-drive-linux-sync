@@ -58,7 +58,7 @@ SEP=$'\x1f'
 SETTING_KEYS=(CONFLICT_STRATEGY SYNC_JOBS
     TRASH_RETENTION_DAYS LOG_RETENTION_DAYS
     DELETE_CONFIRM_COUNT DELETE_CONFIRM_PERCENT MAX_FILE_SIZE_MB
-    NOTIFY WATCH_POLL_MINUTES WATCH_DELAY_SECONDS CURRENT_PAIR DEBUG)
+    NOTIFY WATCH_POLL_MINUTES WATCH_DELAY_SECONDS DEBUG)
 ARRAY_KEYS=(EXCLUDE_PATTERNS PAIR_LOCAL PAIR_REMOTE PAIR_MODE PAIR_SKIP)
 declare -a CFG_EXCLUDE_PATTERNS=() CFG_PAIR_LOCAL=() CFG_PAIR_REMOTE=() CFG_PAIR_MODE=() CFG_PAIR_SKIP=()
 ENV_PAIR=false     # true when PROTON_SYNC_LOCAL_DIR / _REMOTE_DIR set the folders
@@ -153,7 +153,6 @@ save_config() {
         --arg notify "$CFG_NOTIFY" \
         --argjson watch_poll_minutes "$CFG_WATCH_POLL_MINUTES" \
         --argjson watch_delay_seconds "$CFG_WATCH_DELAY_SECONDS" \
-        --argjson current_pair "$CFG_CURRENT_PAIR" \
         --argjson debug "$CFG_DEBUG" \
         --argjson exclude_patterns "$(jq -n '$ARGS.positional' --args "${CFG_EXCLUDE_PATTERNS[@]+"${CFG_EXCLUDE_PATTERNS[@]}"}")" \
         --argjson pairs "$(jq -n '$ARGS.positional' --jsonargs "${pairs_json[@]+"${pairs_json[@]}"}")" \
@@ -162,7 +161,7 @@ save_config() {
           delete_confirm_count: $delete_confirm_count, delete_confirm_percent: $delete_confirm_percent,
           max_file_size_mb: $max_file_size_mb, notify: $notify,
           watch_poll_minutes: $watch_poll_minutes, watch_delay_seconds: $watch_delay_seconds,
-          current_pair: $current_pair, debug: $debug,
+          debug: $debug,
           exclude_patterns: $exclude_patterns, pairs: $pairs}') || return 1
     {
         echo "# Proton Drive Sync settings, written by proton-sync-tui.sh."
@@ -190,17 +189,14 @@ apply_env_overrides() {
     if [ -n "${PROTON_SYNC_LOCAL_DIR:-}${PROTON_SYNC_REMOTE_DIR:-}" ]; then
         # Folders given in the environment replace the pair list for this run.
         ENV_PAIR=true
-        local i="$CURRENT_PAIR"
-        is_number "$i" && [ "$i" -lt "${#PAIR_LOCAL[@]}" ] || i=0
-        PAIR_LOCAL=("${PROTON_SYNC_LOCAL_DIR:-${PAIR_LOCAL[$i]:-}}")
-        PAIR_REMOTE=("${PROTON_SYNC_REMOTE_DIR:-${PAIR_REMOTE[$i]:-}}")
+        PAIR_LOCAL=("${PROTON_SYNC_LOCAL_DIR:-${PAIR_LOCAL[0]:-}}")
+        PAIR_REMOTE=("${PROTON_SYNC_REMOTE_DIR:-${PAIR_REMOTE[0]:-}}")
         if [ -z "${PAIR_LOCAL[0]}" ] || [ -z "${PAIR_REMOTE[0]}" ]; then
             echo "ERROR: with no folder pair saved, set both PROTON_SYNC_LOCAL_DIR and PROTON_SYNC_REMOTE_DIR." >&2
             exit 2
         fi
-        PAIR_MODE=("${PAIR_MODE[$i]:-two-way}")
-        PAIR_SKIP=("${PAIR_SKIP[$i]:-}")
-        CURRENT_PAIR=0
+        PAIR_MODE=("${PAIR_MODE[0]:-two-way}")
+        PAIR_SKIP=("${PAIR_SKIP[0]:-}")
     fi
     CONFLICT_STRATEGY="${PROTON_SYNC_CONFLICT:-$CONFLICT_STRATEGY}"
     SYNC_JOBS="${PROTON_SYNC_JOBS:-$SYNC_JOBS}"
@@ -235,7 +231,6 @@ validate_settings() {
         case "${PAIR_MODE[$i]:-}" in two-way|upload|download) ;; *) PAIR_MODE[$i]=two-way ;; esac
         PAIR_SKIP[$i]="${PAIR_SKIP[$i]:-}"
     done
-    is_number "$CURRENT_PAIR" && [ "$CURRENT_PAIR" -lt "${#PAIR_LOCAL[@]}" ] || CURRENT_PAIR=0
 }
 
 # select_pair INDEX — make a folder pair the one the engine and menus use.

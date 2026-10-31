@@ -34,9 +34,6 @@ watch_poll_minutes: 15
 # Continuous sync: sync this many seconds after the last local change.
 watch_delay_seconds: 5
 
-# Position in pairs (from 0) of the folder pair the menu opens with.
-current_pair: 0
-
 # Write extra detail to the per-run logs.
 debug: false
 

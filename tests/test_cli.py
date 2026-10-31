@@ -262,7 +262,6 @@ class SettingsFileTests(_OfflineTestCase):
             "notify": "problems",
             "watch_poll_minutes": 5,
             "watch_delay_seconds": 3,
-            "current_pair": 1,
             "debug": True,
             "exclude_patterns": ["*.tmp", "name with spaces"],
             "pairs": [
