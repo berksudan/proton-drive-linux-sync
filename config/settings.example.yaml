@@ -1,0 +1,66 @@
+# Proton Drive Sync settings: template for config/settings.yaml.
+# scripts/setup.sh copies this file to config/settings.yaml when that file is missing.
+# Every value below is the built-in default; a setting left out keeps its default.
+# The menu (proton-drive-sync) rewrites config/settings.yaml, so comments there are lost.
+
+# What to do when a file changed on both sides: ask | local | remote | both | skip.
+# Background syncs treat "ask" as "skip".
+conflict_strategy: ask
+
+# Transfers and folder listings that run at the same time.
+sync_jobs: 4
+
+# Days to keep files in the local trash (state/pairs/<id>/trash); 0 keeps them until you delete them.
+trash_retention_days: 30
+
+# Days to keep detailed per-run logs (state/pairs/<id>/logs); 0 keeps them forever.
+log_retention_days: 90
+
+# Ask before a sync deletes more files than this; 0 turns the check off.
+delete_confirm_count: 50
+
+# ...or more than this percentage of the synced files; 0 turns the check off.
+delete_confirm_percent: 25
+
+# Skip files larger than this many megabytes; 0 means no limit.
+max_file_size_mb: 0
+
+# Desktop notifications from background syncs: off | problems | changes.
+notify: "off"
+
+# Continuous sync: check Proton Drive for changes every this many minutes.
+watch_poll_minutes: 15
+
+# Continuous sync: sync this many seconds after the last local change.
+watch_delay_seconds: 5
+
+# Position in pairs (from 0) of the folder pair the menu opens with.
+current_pair: 0
+
+# Write extra detail to the per-run logs.
+debug: false
+
+# Names never synced, matched against every part of a path.
+exclude_patterns:
+  - "*.tmp"
+  - "*.swp"
+  - "*.partial"
+  - .DS_Store
+  - Thumbs.db
+  - .git
+  - .proton-sync
+
+# Folder pairs to sync; nothing is synced while this list is empty.
+# Each pair:
+#   local:  local folder (a leading ~/ means your home folder)
+#   remote: Proton Drive folder, starting with /my-files
+#   mode:   two-way | upload (backup to Proton) | download (from Proton only)
+#   skip:   folders inside the pair, relative to it, that are never synced
+# Example:
+#   pairs:
+#     - local: ~/Documents/Notes
+#       remote: /my-files/Notes
+#       mode: two-way
+#       skip:
+#         - drafts/old
+pairs: []

@@ -42,8 +42,8 @@ EXCLUDE_PATTERNS=(
 # FILE LOCATIONS
 # ============================================================
 
-CONFIG_FILE="${PROTON_SYNC_CONFIG:-$APP_DIR/config/config}"
-STATE_ROOT="${XDG_DATA_HOME:-$HOME/.local/share}/proton-sync"
+CONFIG_FILE="${PROTON_SYNC_CONFIG:-$APP_DIR/config/settings.yaml}"
+STATE_ROOT="$APP_DIR/state"
 LOCK_FILE="$STATE_ROOT/sync.lock"
 RUN_LOG="$APP_DIR/logs/runs.log"
 
@@ -63,13 +63,52 @@ ARRAY_KEYS=(EXCLUDE_PATTERNS PAIR_LOCAL PAIR_REMOTE PAIR_MODE PAIR_SKIP)
 declare -a CFG_EXCLUDE_PATTERNS=() CFG_PAIR_LOCAL=() CFG_PAIR_REMOTE=() CFG_PAIR_MODE=() CFG_PAIR_SKIP=()
 ENV_PAIR=false     # true when PROTON_SYNC_LOCAL_DIR / _REMOTE_DIR set the folders
 
+SETTINGS_YAML_TO_SHELL='
+if type != "object" then error("the file must map setting names to values") else . end
+| ($scalar_keys | split(" ") | map(select(length > 0))) as $scalars
+| (keys - $scalars - ["exclude_patterns", "pairs"]) as $unknown
+| if ($unknown | length) > 0 then error("unknown setting(s): " + ($unknown | join(", "))) else . end
+| (to_entries[] | select(.key | IN($scalars[]))
+    | if (.value | type | IN("string", "number", "boolean"))
+      then "\(.key | ascii_upcase)=\(.value | tostring | @sh)"
+      else error("setting \(.key) must be a single value") end),
+  (if has("exclude_patterns") then
+      if (.exclude_patterns | type) == "array" and all(.exclude_patterns[]; type == "string")
+      then "EXCLUDE_PATTERNS=(\(.exclude_patterns | map(@sh) | join(" ")))"
+      else error("exclude_patterns must be a list of names") end
+   else empty end),
+  (if has("pairs") then
+      if (.pairs | type) != "array" then error("pairs must be a list") else . end
+      | (.pairs | to_entries | map(
+          (.key + 1) as $number | .value
+          | if type != "object" then error("pair \($number) must map local, remote, mode and skip") else . end
+          | (keys - ["local", "remote", "mode", "skip"]) as $extra
+          | if ($extra | length) > 0 then error("pair \($number): unknown key(s): " + ($extra | join(", "))) else . end
+          | if (.local | type) != "string" or (.remote | type) != "string"
+            then error("pair \($number) needs a local and a remote folder") else . end
+          | if (.mode // "two-way" | IN("two-way", "upload", "download")) | not
+            then error("pair \($number): mode must be two-way, upload or download") else . end
+          | if (.skip // [] | type) != "array" or (all((.skip // [])[]; type == "string") | not)
+            then error("pair \($number): skip must be a list of folders") else . end
+          | {local, remote, mode: (.mode // "two-way"), skip: ((.skip // []) | join("\n"))})) as $pairs
+      | "PAIR_LOCAL=(\($pairs | map(.local | @sh) | join(" ")))",
+        "PAIR_REMOTE=(\($pairs | map(.remote | @sh) | join(" ")))",
+        "PAIR_MODE=(\($pairs | map(.mode | @sh) | join(" ")))",
+        "PAIR_SKIP=(\($pairs | map(.skip | @sh) | join(" ")))"
+   else empty end)
+'
+
 load_config() {
-    if [ -f "$CONFIG_FILE" ]; then
-        # shellcheck source=/dev/null
-        if ! source "$CONFIG_FILE"; then
-            echo "WARNING: could not read settings from $CONFIG_FILE" >&2
-        fi
+    local assignments i
+    [ -f "$CONFIG_FILE" ] || return 0
+    if ! assignments=$(yq -r --arg scalar_keys "${SETTING_KEYS[*],,}" "$SETTINGS_YAML_TO_SHELL" "$CONFIG_FILE"); then
+        echo "ERROR: couldn't read the settings in $CONFIG_FILE (see the message above)." >&2
+        exit 1
     fi
+    eval "$assignments"
+    for i in "${!PAIR_LOCAL[@]}"; do
+        PAIR_LOCAL[$i]="${PAIR_LOCAL[$i]/#\~\//$HOME/}"
+    done
 }
 
 # copy_array SOURCE_NAME DEST_NAME
@@ -90,23 +129,45 @@ remember_saved_settings() {
     done
 }
 
+pair_json() {
+    jq -n --arg local "${CFG_PAIR_LOCAL[$1]}" --arg remote "${CFG_PAIR_REMOTE[$1]}" \
+        --arg mode "${CFG_PAIR_MODE[$1]}" --arg skip "${CFG_PAIR_SKIP[$1]}" \
+        '{local: $local, remote: $remote, mode: $mode, skip: ($skip | split("\n") | map(select(length > 0)))}'
+}
+
 save_config() {
-    local key var tmp="$CONFIG_FILE.tmp"
+    local tmp="$CONFIG_FILE.tmp" i settings_json
+    local -a pairs_json=()
     mkdir -p "$(dirname "$CONFIG_FILE")" || return 1
+    for i in "${!CFG_PAIR_LOCAL[@]}"; do
+        pairs_json+=("$(pair_json "$i")") || return 1
+    done
+    settings_json=$(jq -n \
+        --arg conflict_strategy "$CFG_CONFLICT_STRATEGY" \
+        --argjson sync_jobs "$CFG_SYNC_JOBS" \
+        --argjson trash_retention_days "$CFG_TRASH_RETENTION_DAYS" \
+        --argjson log_retention_days "$CFG_LOG_RETENTION_DAYS" \
+        --argjson delete_confirm_count "$CFG_DELETE_CONFIRM_COUNT" \
+        --argjson delete_confirm_percent "$CFG_DELETE_CONFIRM_PERCENT" \
+        --argjson max_file_size_mb "$CFG_MAX_FILE_SIZE_MB" \
+        --arg notify "$CFG_NOTIFY" \
+        --argjson watch_poll_minutes "$CFG_WATCH_POLL_MINUTES" \
+        --argjson watch_delay_seconds "$CFG_WATCH_DELAY_SECONDS" \
+        --argjson current_pair "$CFG_CURRENT_PAIR" \
+        --argjson debug "$CFG_DEBUG" \
+        --argjson exclude_patterns "$(jq -n '$ARGS.positional' --args "${CFG_EXCLUDE_PATTERNS[@]+"${CFG_EXCLUDE_PATTERNS[@]}"}")" \
+        --argjson pairs "$(jq -n '$ARGS.positional' --jsonargs "${pairs_json[@]+"${pairs_json[@]}"}")" \
+        '{conflict_strategy: $conflict_strategy, sync_jobs: $sync_jobs,
+          trash_retention_days: $trash_retention_days, log_retention_days: $log_retention_days,
+          delete_confirm_count: $delete_confirm_count, delete_confirm_percent: $delete_confirm_percent,
+          max_file_size_mb: $max_file_size_mb, notify: $notify,
+          watch_poll_minutes: $watch_poll_minutes, watch_delay_seconds: $watch_delay_seconds,
+          current_pair: $current_pair, debug: $debug,
+          exclude_patterns: $exclude_patterns, pairs: $pairs}') || return 1
     {
         echo "# Proton Drive Sync settings, written by proton-sync-tui.sh."
-        echo "# Edit with the menus, or by hand (this file is bash)."
-        for key in "${SETTING_KEYS[@]}"; do
-            var="CFG_$key"
-            printf '%s=%q\n' "$key" "${!var}"
-        done
-        for key in "${ARRAY_KEYS[@]}"; do
-            local -n _arr="CFG_$key"
-            printf '%s=(' "$key"
-            [ "${#_arr[@]}" -gt 0 ] && printf ' %q' "${_arr[@]}"
-            printf ' )\n'
-            unset -n _arr
-        done
+        echo "# Every setting is described in config/settings.example.yaml."
+        yq -y . <<< "$settings_json"
     } > "$tmp" && mv "$tmp" "$CONFIG_FILE"
 }
 
