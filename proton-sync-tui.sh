@@ -1357,6 +1357,38 @@ append_run_log() {
     fi
 }
 
+show_run_log() {
+    local follow="$1" color=false
+    local -a tail_args=(-n 20)
+    local run_log_dir
+    run_log_dir=$(dirname "$RUN_LOG")
+    if [ -L "$run_log_dir" ] && [ ! -e "$run_log_dir" ]; then
+        echo "ERROR: $run_log_dir links to $(readlink "$run_log_dir"), which doesn't exist." >&2
+        echo "If you moved the repo, run scripts/setup.sh from its new location." >&2
+        return 1
+    fi
+    if [ ! -f "$RUN_LOG" ]; then
+        echo "No runs logged yet ($RUN_LOG)."
+        return 0
+    fi
+    [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && color=true
+    [ "$follow" = true ] && tail_args+=(-f)
+    tail "${tail_args[@]}" "$RUN_LOG" | awk -F '\t' -v color="$color" '
+        BEGIN {
+            if (color == "true") {
+                dim = "\033[2m"; reset = "\033[0m"
+                status_color["ok"] = "\033[32m"
+                status_color["conflict"] = "\033[1;33m"
+                status_color["error"] = "\033[1;31m"
+                status_color["stopped"] = "\033[1;31m"
+            }
+        }
+        {
+            printf "%s%s%s  %s%-8s%s  %s  %s\n", dim, $1, reset, status_color[$2], $2, reset, $3, $4
+            fflush()
+        }'
+}
+
 # True if deleting N files needs the user's confirmation.
 deletions_exceed_limit() {
     local n="$1" total="${#SNAPSHOT_LOCAL_FP[@]}"
@@ -3642,6 +3674,8 @@ Usage: $(basename "$0") [OPTIONS]
   --watch          Continuous sync: sync local changes within seconds and
                    check Proton regularly. Runs until stopped.
   --status         Show folder pairs, last results and automatic sync, then exit.
+  --log [-f]       Show the last 20 sync runs from the run log; -f keeps
+                   showing new runs until stopped.
   --schedule KIND  Set automatic sync without the menu, then exit. KIND is
                    off, hourly, six (every 6 hours), daily or watch (continuous).
   --install        Copy this script to ~/.local/bin/proton-drive-sync and add
@@ -3662,6 +3696,7 @@ START_FRESH=false
 ACTION=menu
 ONLY_PAIR=""
 SCHEDULE_KIND=""
+FOLLOW=false
 while [ $# -gt 0 ]; do
     case "$1" in
         --headless|--sync) HEADLESS=true ;;
@@ -3676,6 +3711,8 @@ while [ $# -gt 0 ]; do
             ONLY_PAIR=$((n - 1)) ;;
         --watch) ACTION=watch ;;
         --status) ACTION=status ;;
+        --log) ACTION=log ;;
+        -f|--follow) FOLLOW=true ;;
         --schedule|--schedule=*)
             if [ "$1" = --schedule ]; then shift; SCHEDULE_KIND="${1:-}"; else SCHEDULE_KIND="${1#--schedule=}"; fi
             case "$SCHEDULE_KIND" in
@@ -3690,6 +3727,10 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+if [ "$FOLLOW" = true ] && [ "$ACTION" != log ]; then
+    echo "-f only works with --log" >&2; exit 2
+fi
 
 load_config
 validate_settings
@@ -3711,6 +3752,7 @@ select_pair "${ONLY_PAIR:-$CURRENT_PAIR}"
 
 case "$ACTION" in
     status)    print_status; exit 0 ;;
+    log)       show_run_log "$FOLLOW"; exit $? ;;
     schedule)  schedule_from_cli "$SCHEDULE_KIND"; exit $? ;;
     install)   install_script; exit $? ;;
     uninstall) uninstall_script; exit $? ;;
