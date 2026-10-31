@@ -32,11 +32,11 @@ install_apt_packages() {
 }
 
 create_settings_from_example() {
-    if [ -e "$REPO_DIR/config/settings.yaml" ]; then
-        echo "Keeping $REPO_DIR/config/settings.yaml"
+    if [ -e "$REPO_DIR/settings.yaml" ]; then
+        echo "Keeping $REPO_DIR/settings.yaml"
     else
-        cp "$REPO_DIR/config/settings.example.yaml" "$REPO_DIR/config/settings.yaml"
-        echo "Created $REPO_DIR/config/settings.yaml with no folder pairs; add them with: proton-drive-linux-sync"
+        cp "$REPO_DIR/settings.example.yaml" "$REPO_DIR/settings.yaml"
+        echo "Created $REPO_DIR/settings.yaml with no folder pairs; add them with: proton-drive-linux-sync"
     fi
 }
 
@@ -58,4 +58,4 @@ print_step "[3/4] Turning on continuous sync"
 enable_continuous_sync
 print_step "[4/4] Installing the proton-drive-linux-sync command"
 install_sync_command
-print_step "Setup done. Settings: $REPO_DIR/config/settings.yaml. Recent syncs: proton-drive-linux-sync --log"
+print_step "Setup done. Settings: $REPO_DIR/settings.yaml. Recent syncs: proton-drive-linux-sync --log"

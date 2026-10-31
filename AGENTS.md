@@ -8,9 +8,9 @@
 - `lib/`: one module per concern: `settings`, `pairs`, `state`, `logging`, `run_log`, `lock`, `execution`, `local_files`, `proton` (all `proton-drive` CLI calls), `conflicts`, `transfers`, `plan`, `engine` (`sync_engine`), `text`, `schedule`, `headless`, `watch`, `install`, `cli`.
 - `lib/tui/`: the interactive menu (dialog or whiptail): `widgets` and one file per screen group, ending with `main_menu`.
 - A new module loads only once it is added to `MODULES` in `proton-sync-tui.sh`.
-- `scripts/setup.sh`: machine setup: apt packages, `config/settings.yaml` from the example when missing, continuous sync, then `--install`.
-- `config/settings.example.yaml`: tracked settings template holding every setting at its built-in default, with no folder pairs.
-- `config/settings.yaml`: this machine's settings and folder pairs (`CONFIG_FILE`, read by `load_config`, written by `save_config`), gitignored.
+- `scripts/setup.sh`: machine setup: apt packages, `settings.yaml` from the example when missing, continuous sync, then `--install`.
+- `settings.example.yaml`: tracked settings template holding every setting at its built-in default, with no folder pairs.
+- `settings.yaml`: this machine's settings and folder pairs (`CONFIG_FILE`, read by `load_config`, written by `save_config`), gitignored.
 - `tests/`: end-to-end test suite; `tests/README.md` explains how it isolates itself.
 - `README.md`: user-facing overview, requirements, setup and common commands; update it when those change.
 - `LICENSE`: upstream MIT notice; keep it with the code.
@@ -26,10 +26,10 @@
 
 ## Settings File
 
-- With no folder pairs in `config/settings.yaml`, nothing is synced: `--headless` and continuous sync report that there is nothing to sync, and the menu asks for a pair first (`headless_run`, `run_cli`).
+- With no folder pairs in `settings.yaml`, nothing is synced: `--headless` and continuous sync report that there is nothing to sync, and the menu asks for a pair first (`headless_run`, `run_cli`).
 - `load_config` stops with an error naming the problem for unknown settings, unknown pair keys, a bad pair `mode` or wrongly typed values (`SETTINGS_YAML_TO_SHELL`); a setting left out keeps its built-in default.
-- A change that adds, renames or removes a setting, or changes its default (`lib/settings.sh`: the defaults at the top, `SETTING_KEYS`, `SETTINGS_YAML_TO_SHELL`, `save_config`), updates `config/settings.example.yaml` in the same change; `test_example_settings_are_the_built_in_defaults` in `tests/test_cli.py` fails while they differ.
-- After such a change, bring this machine's `config/settings.yaml` to the example's set of keys, keeping its existing values; never copy example values over existing settings or folder pairs.
+- A change that adds, renames or removes a setting, or changes its default (`lib/settings.sh`: the defaults at the top, `SETTING_KEYS`, `SETTINGS_YAML_TO_SHELL`, `save_config`), updates `settings.example.yaml` in the same change; `test_example_settings_are_the_built_in_defaults` in `tests/test_cli.py` fails while they differ.
+- After such a change, bring this machine's `settings.yaml` to the example's set of keys, keeping its existing values; never copy example values over existing settings or folder pairs.
 
 ## Sync Run Log
 

@@ -70,7 +70,7 @@ class CommandLineTests(_OfflineTestCase):
         self.assertIn("Mode:       two-way", completed.stdout)
         self.assertIn("Last sync:  never", completed.stdout)
 
-    def test_settings_are_read_from_the_config_folder_next_to_the_script(self) -> None:
+    def test_settings_are_read_from_settings_yaml_next_to_the_script(self) -> None:
         completed = self.sandbox.run("--status")
         self.assertIn("Settings:        " + str(self.sandbox.config_file), completed.stdout)
         self.assertFalse((self.sandbox.config_home / "proton-sync").exists())

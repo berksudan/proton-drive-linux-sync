@@ -9,7 +9,7 @@
 
 ## Isolation
 
-- Each test copies into `tests/sandboxes/<test>/repo` only the files git would commit (`git ls-files --cached --others --exclude-standard`, without `tests/`), so gitignored files such as `config/settings.yaml` and `.agents/` never reach a test.
+- Each test copies into `tests/sandboxes/<test>/repo` only the files git would commit (`git ls-files --cached --others --exclude-standard`, without `tests/`), so gitignored files such as `settings.yaml` and `.agents/` never reach a test.
 - Each test also gets its own HOME and XDG folders (`XDG_CONFIG_HOME`, `XDG_DATA_HOME`, `XDG_STATE_HOME`) inside its sandbox, so its sync history, run log, installed command, launcher and systemd units stay there and never touch yours.
 - `systemctl`, `crontab`, `sudo` and `notify-send` are stubs that only record their arguments, so your running continuous sync is never touched.
 - Sandboxes are deleted after each test; set `PROTON_SYNC_KEEP_SANDBOXES=1` to keep them for debugging (`tests/sandboxes/` is gitignored).

@@ -262,11 +262,11 @@ class Sandbox:
 
     @property
     def config_file(self) -> pathlib.Path:
-        return self.repo / "config" / "settings.yaml"
+        return self.repo / "settings.yaml"
 
     @property
     def example_config_file(self) -> pathlib.Path:
-        return self.repo / "config" / "settings.example.yaml"
+        return self.repo / "settings.example.yaml"
 
     @property
     def state_root(self) -> pathlib.Path:

@@ -42,7 +42,7 @@ EXCLUDE_PATTERNS=(
 # FILE LOCATIONS
 # ============================================================
 
-CONFIG_FILE="$APP_DIR/config/settings.yaml"
+CONFIG_FILE="$APP_DIR/settings.yaml"
 STATE_ROOT="${XDG_STATE_HOME:-$HOME/.local/state}/proton-drive-linux-sync"
 LOCK_FILE="$STATE_ROOT/sync.lock"
 RUN_LOG="$STATE_ROOT/runs.log"
@@ -165,7 +165,7 @@ save_config() {
           exclude_patterns: $exclude_patterns, pairs: $pairs}') || return 1
     {
         echo "# Proton Drive Linux Sync settings, written by proton-sync-tui.sh."
-        echo "# Every setting is described in config/settings.example.yaml."
+        echo "# Every setting is described in settings.example.yaml."
         yq -y . <<< "$settings_json"
     } > "$tmp" && mv "$tmp" "$CONFIG_FILE"
 }
