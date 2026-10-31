@@ -1,4 +1,10 @@
-/.agents/
+# This machine's settings and folder pairs; save_config writes the .tmp copy first.
 /settings.yaml
+/settings.yaml.tmp
+
+# Local agent plans.
+/.agents/
+
+# Test suite output.
 /tests/sandboxes/
 __pycache__/
