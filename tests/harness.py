@@ -1,5 +1,6 @@
 import collections
 import collections.abc
+import concurrent.futures
 import dataclasses
 import enum
 import json
@@ -21,6 +22,7 @@ REPO_DIR = pathlib.Path(__file__).resolve().parents[1]
 REMOTE_ROOT_ENV = "PROTON_SYNC_TEST_REMOTE_ROOT"
 SANDBOX_PARENT = REPO_DIR / "tests" / "sandboxes"
 SYNC_TIMEOUT_SECONDS = 300
+CLEANUP_JOBS = 6
 LOG_COLUMN_COUNT = 5
 
 _TEST_SUITE_FOLDER = "tests/"
@@ -149,12 +151,24 @@ def remote_trash(path: str) -> None:
     _run_proton("filesystem", "trash", path)
 
 
-def _remote_folder_uids(path: str) -> set[str]:
-    folder_uids = {remote_uid(path)}
-    for entry in remote_list(path).values():
-        if entry.kind == "folder":
-            folder_uids |= _remote_folder_uids(path + "/" + entry.name)
+def _remote_folder_uids(*, root: str, pool: concurrent.futures.ThreadPoolExecutor) -> set[str]:
+    folder_uids = {remote_uid(root)}
+    level = [root]
+    while level:
+        next_level = []
+        for parent, listing in zip(level, pool.map(remote_list, level), strict=True):
+            for entry in listing.values():
+                if entry.kind == "folder":
+                    folder_uids.add(entry.uid)
+                    next_level.append(parent + "/" + entry.name)
+        level = next_level
     return folder_uids
+
+
+def _delete_from_trash(*, name: str, count: int) -> int:
+    for _unused in range(count):
+        _run_proton("filesystem", "delete", "/trash/" + name)
+    return count
 
 
 @dataclasses.dataclass(frozen=True, kw_only=True, slots=True)
@@ -164,7 +178,12 @@ class TrashCleanup:
 
 
 def remote_delete_tree_permanently(path: str) -> TrashCleanup:
-    folder_uids = _remote_folder_uids(path)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=CLEANUP_JOBS) as pool:
+        return _delete_tree_permanently(path=path, pool=pool)
+
+
+def _delete_tree_permanently(*, path: str, pool: concurrent.futures.ThreadPoolExecutor) -> TrashCleanup:
+    folder_uids = _remote_folder_uids(root=path, pool=pool)
     root_uid = remote_uid(path)
     remote_trash(path)
     trashed = json.loads(_run_proton("filesystem", "list", "/trash", "-j"))
@@ -180,16 +199,13 @@ def remote_delete_tree_permanently(path: str) -> TrashCleanup:
             test_count_by_name[name] += 1
     if root_name == "":
         raise RuntimeError("trashed test folder not found in /trash", path)
-    deleted_count = 0
-    left_in_trash = []
-    for name, count in sorted(test_count_by_name.items()) + [(root_name, 1)]:
-        if trash_count_by_name[name] != count:
-            left_in_trash.append(name)
-            continue
-        for _unused in range(count):
-            _run_proton("filesystem", "delete", "/trash/" + name)
-            deleted_count += 1
-    return TrashCleanup(deleted_count=deleted_count, left_in_trash=tuple(left_in_trash))
+    left_in_trash = tuple(sorted(name for name, count in test_count_by_name.items() if trash_count_by_name[name] != count))
+    deletable = [(name, count) for name, count in sorted(test_count_by_name.items()) if name not in left_in_trash]
+    deleted_count = sum(pool.map(lambda name_and_count: _delete_from_trash(name=name_and_count[0], count=name_and_count[1]), deletable))
+    if trash_count_by_name[root_name] != 1:
+        return TrashCleanup(deleted_count=deleted_count, left_in_trash=left_in_trash + (root_name,))
+    deleted_count += _delete_from_trash(name=root_name, count=1)
+    return TrashCleanup(deleted_count=deleted_count, left_in_trash=left_in_trash)
 
 
 def remote_test_root() -> str:

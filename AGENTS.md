@@ -37,7 +37,7 @@
 
 ## Checks
 
-- Run `python3 tests/run_tests.py --offline` after every change, and `python3 tests/run_tests.py` (about 7 minutes, uses the logged-in `proton-drive` CLI) after changes to syncing, scheduling or `lib/proton.sh`.
+- Run `python3 tests/run_tests.py --offline` after every change, and `python3 tests/run_tests.py` (about 2 minutes, uses the logged-in `proton-drive` CLI, runs Proton tests 6 at a time; `--jobs N` changes that) after changes to syncing, scheduling or `lib/proton.sh`.
 - Then check this machine with `proton-drive-sync --status` and `proton-drive-sync --log`.
 
 ## Upstream

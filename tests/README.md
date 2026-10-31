@@ -1,7 +1,9 @@
 # Tests
 
 - End-to-end tests for `proton-sync-tui.sh`, run with the standard library `unittest` plus PyYAML (installed with `yq` by `scripts/setup.sh`).
-- Full run, about 7 minutes, uses your logged-in `proton-drive` CLI: `python3 tests/run_tests.py`
+- Full run, about 2 minutes, uses your logged-in `proton-drive` CLI: `python3 tests/run_tests.py`
+  - Offline tests run first; then the Proton tests run 6 at a time, each in its own process (`--jobs N` changes that), with the continuous-sync test, which waits for a 1-minute Proton check, started first.
+  - Each run ends with the slowest tests and the cleanup time.
 - Offline only, about 10 seconds, no Proton calls: `python3 tests/run_tests.py --offline`
 - One area only: `python3 tests/run_tests.py -k conflict` (`-k` repeats and matches test names).
 

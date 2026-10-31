@@ -1,4 +1,6 @@
+import os
 import shutil
+import signal
 import subprocess
 
 import harness
@@ -23,18 +25,13 @@ class TwoWaySyncTests(harness.SyncTestCase):
         self.assertEqual(row.pair, str(self.local) + " <> " + self.remote)
         self.assertEqual(row.result, "2 up, 2 down, no errors")
 
-    def test_second_sync_without_changes_changes_nothing(self) -> None:
-        self.configure()
-        self.write_local("a.txt", "a")
-        self.sync()
-        self.sync()
-        self.assertEqual(self.last_run().result, "no changes, no errors")
-
     def test_edits_flow_both_ways(self) -> None:
         self.configure()
         self.write_local("a.txt", "v1")
         self.put_remote(relative="b.txt", content="v1")
         self.sync()
+        self.sync()
+        self.assertEqual(self.last_run().result, "no changes, no errors")
         self.write_local("a.txt", "version two, local")
         self.put_remote(relative="b.txt", content="version two, from Proton", replace=True)
         self.sync()
@@ -203,7 +200,13 @@ class SafetyTests(harness.SyncTestCase):
     def test_running_sync_lock_blocks_a_second_sync_until_its_owner_exits(self) -> None:
         self.configure()
         self.write_local("a.txt", "a")
-        holder = subprocess.Popen(["bash", "-c", "sleep 120; true", "proton-lock-holder"])
+        holder = subprocess.Popen(
+            ["bash", "-c", "sleep 120; true", "proton-lock-holder"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
         try:
             lock = self.sandbox.state_root / "sync.lock"
             lock.mkdir(parents=True)
@@ -212,7 +215,7 @@ class SafetyTests(harness.SyncTestCase):
             self.assertIn("Another sync is already running", completed.stderr)
             self.assertEqual(self.remote_names(), {})
         finally:
-            holder.kill()
+            os.killpg(holder.pid, signal.SIGKILL)
             holder.wait()
         self.sync()
         self.assertIn("a.txt", self.remote_names())
