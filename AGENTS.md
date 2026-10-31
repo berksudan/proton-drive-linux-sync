@@ -13,7 +13,7 @@
 - `settings.yaml`: this machine's settings and folder pairs (`CONFIG_FILE`, read by `load_config`, written by `save_config`), gitignored.
 - `tests/`: end-to-end test suite; `tests/README.md` explains how it isolates itself.
 - `README.md`: user-facing overview, requirements, setup and common commands; update it when those change.
-- `LICENSE`: upstream MIT notice; keep it with the code.
+- `LICENSE`: MIT notice with the upstream copyright line and this fork's; keep both with the code.
 
 ## Runtime
 
