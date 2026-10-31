@@ -52,6 +52,10 @@ proton-drive-linux-sync --headless   # sync every folder pair without the menu
 proton-drive-linux-sync --help       # list every option
 ```
 
+`--log` lists each run's time, result, trigger, folder pair and changes, in colour in a terminal; add `-f` to keep watching for new runs:
+
+![Output of proton-drive-linux-sync --log -f -n 5: five continuous syncs, each OK with no changes and no errors](docs/sync-run-log.png)
+
 Your settings are in `settings.yaml`, and `settings.example.yaml` describes each one with its default.
 Sync history, logs and the local trash are in `~/.local/state/proton-drive-linux-sync`.
 
