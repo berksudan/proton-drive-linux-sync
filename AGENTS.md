@@ -12,6 +12,7 @@
 - `config/settings.example.yaml`: tracked settings template holding every setting at its built-in default, with no folder pairs.
 - `config/settings.yaml`: this machine's settings and folder pairs (`CONFIG_FILE`, read by `load_config`, written by `save_config`), gitignored.
 - `tests/`: end-to-end test suite; `tests/README.md` explains how it isolates itself.
+- `README.md`: user-facing overview, requirements, setup and common commands; update it when those change.
 - `LICENSE`: upstream MIT notice; keep it with the code.
 
 ## Runtime
