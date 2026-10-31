@@ -12,6 +12,7 @@ print_status() {
         echo "Sync running:    yes"
     fi
     echo
+    [ "$(pair_count)" -eq 0 ] && echo "No folder pairs set up, so nothing is synced. Add one with: proton-drive-sync (Folder pairs)"
     for i in "${!PAIR_LOCAL[@]}"; do
         echo "$((i + 1)). $(pair_label "$i")"
         echo "   Mode:       $(mode_label "${PAIR_MODE[$i]}")"
@@ -108,7 +109,7 @@ run_cli() {
         echo "There is no folder pair $((ONLY_PAIR + 1)); there are $(pair_count) (see --status)." >&2
         exit 2
     fi
-    select_pair "${ONLY_PAIR:-$CURRENT_PAIR}"
+    [ "$(pair_count)" -gt 0 ] && select_pair "${ONLY_PAIR:-$CURRENT_PAIR}"
 
     case "$ACTION" in
         status)    print_status; exit 0 ;;
@@ -163,5 +164,10 @@ run_cli() {
         exit 1
     fi
 
+    if [ "$(pair_count)" -eq 0 ]; then
+        ui_msgbox "No Folder Pairs" "Nothing is synced until you add a folder pair: a local folder and the Proton Drive folder to keep in sync with it."
+        add_pair
+        [ "$(pair_count)" -gt 0 ] || { clear; echo "No folder pair added; nothing to sync."; exit 0; }
+    fi
     main_menu
 }

@@ -4,8 +4,8 @@
 # and PROTON_SYNC_* environment variables override both.
 # ============================================================
 
-LOCAL_DIR="$HOME/Proton Drive/root"
-REMOTE_DIR="/my-files"
+LOCAL_DIR=""
+REMOTE_DIR=""
 CONFLICT_STRATEGY=ask          # ask | local | remote | both | skip
 SYNC_JOBS=4                    # transfers / folder listings at the same time
 TRASH_RETENTION_DAYS=30
@@ -19,7 +19,7 @@ WATCH_DELAY_SECONDS=5          # continuous sync: wait this long after the last 
 DEBUG=false
 
 # Folder pairs, edited from the Folder pairs menu. With no saved pairs,
-# LOCAL_DIR and REMOTE_DIR above become the first one.
+# nothing is synced.
 #   PAIR_MODE: two-way | upload (backup to Proton) | download (from Proton)
 #   PAIR_SKIP: folders or files (relative paths, one per line) not to sync
 PAIR_LOCAL=()
@@ -69,13 +69,6 @@ load_config() {
         if ! source "$CONFIG_FILE"; then
             echo "WARNING: could not read settings from $CONFIG_FILE" >&2
         fi
-    fi
-    # Settings from before folder pairs had a single LOCAL_DIR / REMOTE_DIR.
-    if [ "${#PAIR_LOCAL[@]}" -eq 0 ]; then
-        PAIR_LOCAL=("$LOCAL_DIR")
-        PAIR_REMOTE=("$REMOTE_DIR")
-        PAIR_MODE=(two-way)
-        PAIR_SKIP=("")
     fi
 }
 
@@ -138,8 +131,12 @@ apply_env_overrides() {
         ENV_PAIR=true
         local i="$CURRENT_PAIR"
         is_number "$i" && [ "$i" -lt "${#PAIR_LOCAL[@]}" ] || i=0
-        PAIR_LOCAL=("${PROTON_SYNC_LOCAL_DIR:-${PAIR_LOCAL[$i]}}")
-        PAIR_REMOTE=("${PROTON_SYNC_REMOTE_DIR:-${PAIR_REMOTE[$i]}}")
+        PAIR_LOCAL=("${PROTON_SYNC_LOCAL_DIR:-${PAIR_LOCAL[$i]:-}}")
+        PAIR_REMOTE=("${PROTON_SYNC_REMOTE_DIR:-${PAIR_REMOTE[$i]:-}}")
+        if [ -z "${PAIR_LOCAL[0]}" ] || [ -z "${PAIR_REMOTE[0]}" ]; then
+            echo "ERROR: with no folder pair saved, set both PROTON_SYNC_LOCAL_DIR and PROTON_SYNC_REMOTE_DIR." >&2
+            exit 2
+        fi
         PAIR_MODE=("${PAIR_MODE[$i]:-two-way}")
         PAIR_SKIP=("${PAIR_SKIP[$i]:-}")
         CURRENT_PAIR=0

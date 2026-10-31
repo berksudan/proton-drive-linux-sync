@@ -117,6 +117,10 @@ headless_run() {
     local i rc worst=0
     local -a pairs=("${!PAIR_LOCAL[@]}")
     [ -n "$ONLY_PAIR" ] && pairs=("$ONLY_PAIR")
+    if [ "${#pairs[@]}" -eq 0 ]; then
+        echo "No folder pairs set up, so there is nothing to sync. Add one with: proton-drive-sync (Folder pairs)"
+        return 0
+    fi
     for i in "${pairs[@]}"; do
         select_pair "$i"
         if [ "$START_FRESH" = true ] && [ "$DRY_RUN" != true ]; then
