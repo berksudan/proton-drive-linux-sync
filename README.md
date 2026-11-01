@@ -130,5 +130,5 @@ Then delete the repo folder, which holds your `settings.yaml`.
 
 ## Credits
 
-This project started as [justinsloan/proton-drive-sync](https://github.com/justinsloan/proton-drive-sync) and was split into modules.
+This project is based on [justinsloan/proton-drive-sync](https://github.com/justinsloan/proton-drive-sync) and has been developed independently since.
 It's licensed under MIT; see [LICENSE](LICENSE).
