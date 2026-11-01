@@ -29,6 +29,7 @@ declare -a SKIP_PATHS=()
 declare -a JOB_QUEUE=()
 declare -A JOB_LFP=() JOB_RFP=() JOB_PREV_L=() JOB_PREV_R=()
 ABORT_REASON=""
+REMOTE_MOVE_LANDED_REL=""
 declare -A NEW_REMOTE_FP=()
 
 # Conflict queue

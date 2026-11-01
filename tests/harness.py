@@ -323,7 +323,7 @@ class Sandbox:
         saved = self.root / "saved-settings.yaml"
         script = (
             'set -uo pipefail; APP_DIR="$1"; source "$APP_DIR/lib/settings.sh"; CONFIG_FILE="$2"; load_config; '
-            'validate_settings; remember_saved_settings; CONFIG_FILE="$3"; save_config'
+            'validate_settings "$2"; remember_saved_settings; CONFIG_FILE="$3"; save_config'
         )
         completed = subprocess.run(
             ["bash", "-c", script, "save-settings", str(self.repo), str(source), str(saved)],

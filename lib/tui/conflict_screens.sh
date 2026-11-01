@@ -26,7 +26,7 @@ What would you like to do?" "" "$default" \
             allremote "Keep PROTON for all remaining conflicts") || CONFLICT_CHOICE=skip
         [ "$CONFLICT_CHOICE" = diff ] || return 0
         show_conflict_diff "$rel" "$local_desc" "$remote_desc"
-        default=diff
+        default="diff"
     done
 }
 

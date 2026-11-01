@@ -4,7 +4,7 @@
 
 sync_engine() {
     local conflict_dump="$1"
-    > "$NEW_SNAPSHOT"
+    : > "$NEW_SNAPSHOT"
 
     SNAPSHOT_LOCAL_FP=(); SNAPSHOT_REMOTE_FP=(); SNAPSHOT_SEEN=()
     LOCAL_ITEMS=(); REMOTE_ITEMS=(); KNOWN_DIRS=()
@@ -370,6 +370,13 @@ sync_engine() {
         else
             COUNT_ERRORS=$((COUNT_ERRORS + 1))
             plan failed "Move on Proton failed: $match -> $new_rel"
+            REMAINING_NEW_LOCAL+=("$new_rel")
+            if [ "$REMOTE_MOVE_LANDED_REL" != "$match" ]; then
+                MOVED_FROM["$match"]=1
+                log "[DELETED LOCALLY] $REMOTE_MOVE_LANDED_REL (left by the failed move) -> trashing remote"
+                queue_job trash "$REMOTE_MOVE_LANDED_REL" "" "" \
+                    "${SNAPSHOT_LOCAL_FP[$match]:-}" "${SNAPSHOT_REMOTE_FP[$match]:-}"
+            fi
         fi
     done
     for spec in "${LOCAL_MOVES[@]+"${LOCAL_MOVES[@]}"}"; do
@@ -417,7 +424,7 @@ sync_engine() {
         [ -f "$LOCAL_DIR/$rel" ] && continue
         log "[DELETED LOCALLY] $rel -> trashing remote"
         plan del_remote "$rel"
-        queue_job trash "$rel" "" "" "" ""
+        queue_job trash "$rel" "" "" "${SNAPSHOT_LOCAL_FP[$rel]:-}" "${SNAPSHOT_REMOTE_FP[$rel]:-}"
     done
 
     # Run every queued file transfer (modified and new files, remote
@@ -435,27 +442,8 @@ sync_engine() {
         COUNT_DELETED_LOCAL=$((COUNT_DELETED_LOCAL + 1))
     done
 
-    for rel in "${DEL_LOCAL_FOLDERS[@]+"${DEL_LOCAL_FOLDERS[@]}"}"; do
-        [ -z "$rel" ] && continue
-        local_path="$LOCAL_DIR/$rel"; [ -d "$local_path" ] || continue
-        log "[DELETED REMOTELY] folder: $rel -> removing local"
-        plan del_local "$rel/ (folder)"
-        trash_local "$local_path" "$rel"
-        COUNT_DELETED_LOCAL=$((COUNT_DELETED_LOCAL + 1))
-    done
-
-    for rel in "${TRASH_REMOTE_FOLDERS[@]+"${TRASH_REMOTE_FOLDERS[@]}"}"; do
-        [ -z "$rel" ] && continue
-        [ -d "$LOCAL_DIR/$rel" ] && continue
-        log "[DELETED LOCALLY] folder: $rel -> trashing remote"
-        plan del_remote "$rel/ (folder)"
-        if run_retry proton-drive filesystem trash "$REMOTE_DIR/$rel"; then
-            COUNT_TRASHED_REMOTE=$((COUNT_TRASHED_REMOTE + 1))
-        else
-            COUNT_ERRORS=$((COUNT_ERRORS + 1))
-            plan failed "Deleting folder on Proton failed: $rel"
-        fi
-    done
+    delete_local_folders
+    trash_remote_folders
 
     # ---------- Finalize (snapshot handled by caller) ----------
     gauge 97 "Finishing up..."
@@ -465,16 +453,7 @@ sync_engine() {
 
     {
         echo "=== Scan/transfer summary (pre-conflict) ==="
-        echo "  Unchanged:       $COUNT_OK"
-        echo "  First sync:      $COUNT_FIRST_SYNC"
-        echo "  Uploaded:        $COUNT_UPLOADED"
-        echo "  Downloaded:      $COUNT_DOWNLOADED"
-        echo "  Moved (remote):  $COUNT_MOVED_REMOTE"
-        echo "  Moved (local):   $COUNT_MOVED_LOCAL"
-        echo "  Deleted local:   $COUNT_DELETED_LOCAL"
-        echo "  Trashed remote:  $COUNT_TRASHED_REMOTE"
-        echo "  Conflicts:       $COUNT_CONFLICTS (resolved after gauge)"
-        echo "  Errors:          $COUNT_ERRORS"
+        sync_summary | sed 's/^/  /'
         echo "=== Scan finished $(date) ==="
     } >> "$LOG_FILE"
 
@@ -526,6 +505,6 @@ sync_summary() {
     n=$(plan_count skipped)
     [ "$n" -gt 0 ] && echo "Not synced:      $n (Proton Docs or over the size limit; see Preview)"
     n=$(plan_count note)
-    [ "$n" -gt 0 ] && echo "Notes:           $n name(s) can't be used on Windows (see Preview)"
+    [ "$n" -gt 0 ] && echo "Notes:           $n (see Preview)"
     return 0
 }

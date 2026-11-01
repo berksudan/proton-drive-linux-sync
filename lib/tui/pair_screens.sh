@@ -43,16 +43,30 @@ ask_local_folder() {
 
 # ask_remote_folder DEFAULT — prints a checked Proton path.
 ask_remote_folder() {
-    local value
-    value=$(ui_input "Proton Folder" "Folder on Proton Drive to keep in sync (starts with /):" "$1") || return 1
+    local value parent error
+    value=$(ui_input "Proton Folder" "Folder on Proton Drive to keep in sync (starts with $PROTON_FILES_ROOT):" "$1") || return 1
     [ -z "$value" ] && return 1
     [[ "$value" = /* ]] || value="/$value"
     value=$(strip_slash "$value")
+    if [ "$value" = / ]; then
+        ui_msgbox "Proton Folder" "/ holds Proton Drive's top-level areas (your files, trash, photos and shared items), so it can't be synced. Choose a folder in $PROTON_FILES_ROOT."
+        return 1
+    fi
     ui_infobox "Proton Folder" "Checking $value on Proton Drive..."
-    if ! proton-drive filesystem list "$value" -j >/dev/null 2>&1; then
-        ui_yesno "Proton Folder" "Couldn't open $value on Proton Drive. It may not exist yet, or you may not be logged in.
-
-Use it anyway?" "Use it" "Cancel" || return 1
+    if proton_folder_exists "$value"; then
+        echo "$value"
+        return 0
+    fi
+    parent=$(dirname "$value")
+    if ! proton_folder_exists "$parent"; then
+        ui_msgbox "Proton Folder" "Neither $value nor its parent folder $parent exists on Proton Drive. Create the parent folder first, then try again."
+        return 1
+    fi
+    ui_yesno "Proton Folder" "$value doesn't exist on Proton Drive. Create it?" "Create" "Cancel" || return 1
+    if ! error=$(create_proton_folder "$value" 2>&1); then
+        ui_msgbox "Proton Folder" "Couldn't create $value on Proton Drive:
+$error"
+        return 1
     fi
     echo "$value"
 }
@@ -101,7 +115,7 @@ pairs_menu() {
 add_pair() {
     local loc rem mode warn
     loc=$(ask_local_folder "$HOME/") || return
-    rem=$(ask_remote_folder "/") || return
+    rem=$(ask_remote_folder "$PROTON_FILES_ROOT/") || return
     mode=$(ask_mode two-way) || return
     warn=$(overlap_warning -1 "$loc" "$rem")
     if [ -n "$warn" ]; then

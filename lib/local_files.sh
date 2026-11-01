@@ -9,6 +9,7 @@ is_excluded() {
     IFS='/' read -ra parts <<< "$rel"
     for part in "${parts[@]}"; do
         for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+            # shellcheck disable=SC2254  # exclude patterns are wildcards on purpose
             case "$part" in
                 $pattern) return 0 ;;
             esac

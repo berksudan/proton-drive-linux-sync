@@ -10,7 +10,7 @@ restore_menu() {
         n=$(find "$d" -type f | wc -l)
         [ "$n" -eq 0 ] && continue
         items+=("$d" "$(pretty_stamp "$(basename "$d")")  $n file(s)")
-    done < <(ls -1d "$TRASH_DIR"/*/ 2>/dev/null | sort -r)
+    done < <(find "$TRASH_DIR" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | sort -r)
 
     if [ "${#items[@]}" -eq 0 ]; then
         local keep="$TRASH_RETENTION_DAYS days"

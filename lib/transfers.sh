@@ -66,7 +66,7 @@ process_job_results() {
                 trash)  plan failed "Deleting on Proton failed: $rel" ;;
             esac
             case "$kind" in
-                up_mod|down_mod) snap_file "$rel" "${JOB_PREV_L[$rel]}" "${JOB_PREV_R[$rel]}" ;;
+                up_mod|down_mod|trash) snap_file "$rel" "${JOB_PREV_L[$rel]}" "${JOB_PREV_R[$rel]}" ;;
             esac
             continue
         fi

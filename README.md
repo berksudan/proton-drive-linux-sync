@@ -13,9 +13,12 @@ Timed sync runs hourly, every 6 hours or daily instead.
 
 ## Requirements
 
-- Debian or a Debian-based distribution like Ubuntu, since setup installs packages with `apt`.
-- Proton's `proton-drive` CLI, logged in with `proton-drive auth login`.
+- Debian or a Debian-based distribution like Ubuntu, since setup installs packages with `apt`. For other distributions, see [Other Distributions](#other-distributions).
 - A systemd user session for continuous sync. Without one, timed sync uses cron.
+- Proton's `proton-drive` CLI, installed and logged in:
+  1. Download the Linux file from [Proton's CLI download page](https://proton.me/download/drive/cli/index.html).
+  2. Make it runnable and put it on your `PATH`: `chmod +x proton-drive && mkdir -p ~/.local/bin && mv proton-drive ~/.local/bin/`
+  3. Log in with `proton-drive auth login`. The CLI keeps the login in your desktop keyring (libsecret).
 
 ## Setup
 
@@ -25,16 +28,26 @@ cd proton-drive-linux-sync
 ./scripts/setup.sh
 ```
 
-The setup script installs `dialog`, `inotify-tools`, `jq`, `libnotify-bin` and `yq`.
+The setup script installs `dialog`, `inotify-tools`, `jq`, `libnotify-bin` and `python3-yaml`.
 It then creates `settings.yaml` from `settings.example.yaml`, turns on continuous sync and installs the `proton-drive-linux-sync` command.
 
 The installed command runs straight from this repo, so leave the repo where it is.
 If you move it, run `scripts/setup.sh` again.
 
+### Other Distributions
+
+Install `dialog` (or `whiptail`), `inotify-tools`, `jq`, `libnotify` and PyYAML for Python 3 with your package manager, then run from the repo:
+
+```bash
+cp settings.example.yaml settings.yaml
+./proton-sync-tui.sh --install
+./proton-sync-tui.sh --schedule watch
+```
+
 ## First Sync
 
 1. Run `proton-drive-linux-sync` to open the menu.
-2. Open **Folder pairs** and add a local folder, a Proton folder (starting with `/my-files`) and a mode.
+2. Open **Folder pairs** and add a local folder, a Proton folder (starting with `/my-files`; the menu offers to create a missing one) and a mode.
 3. Choose **Preview sync** to see what the first sync will upload, download or skip.
 4. Choose **Sync now**.
 
@@ -73,6 +86,7 @@ Sync history, logs and the local trash are in `~/.local/state/proton-drive-linux
 - Local files that a sync deletes go to a local trash, which you can restore from with **Restore deleted files**. Files deleted on Proton go to Proton's own trash.
 - If a pair's local folder is suddenly empty or missing (an unplugged drive, a new computer), the sync stops before changing anything. The menu then offers to download everything from Proton again.
 - If the Proton listing comes back empty while sync history exists, the sync stops too, so an expired login can't wipe your local files.
+- A folder deleted on one side is deleted on the other side only when everything in it goes too. A folder that still holds items that aren't synced (excluded or skipped names, files over the size limit, Proton Docs or new files) is kept, and the preview says so.
 - When a file changed on both sides, the menu asks what to keep: local, Proton, both or neither. Keeping both saves the Proton version beside yours as `name.remote.ext`. Background syncs skip conflicts unless you pick a default in Settings.
 
 ## How It Works
@@ -86,7 +100,7 @@ A file that was moved or renamed on one side is moved on the other instead of be
 - Proton Docs aren't synced, because they can't be downloaded as regular files. The preview lists them under **Not synced**.
 - Change detection uses size and modification time, not file contents. Two different edits that leave a file with the same size and modification time look the same.
 - Continuous sync sees local changes within seconds, but sees changes made on Proton (from another computer, say) only at its regular check, every 15 minutes by default.
-- systemd runs automatic sync only while you're logged in. To keep it running after you log out, run `loginctl enable-linger`.
+- systemd runs automatic sync only while you're logged in. To keep it running after you log out, run `loginctl enable-linger`. Syncing after logout was tested only with a keyring that has no password.
 
 ## Troubleshooting
 
@@ -102,6 +116,17 @@ sudo sysctl --system
 **A sync keeps re-downloading everything, or its history looks wrong.**
 Open **Folder pairs**, pick the pair and choose **Start fresh**, or run `proton-drive-linux-sync --headless --start-fresh --pair N`.
 The next sync then behaves like a first sync and deletes nothing.
+
+## Uninstall
+
+```bash
+proton-drive-linux-sync --schedule off           # stop automatic sync
+proton-drive-linux-sync --uninstall              # remove the command and the desktop launcher
+rm -r ~/.local/state/proton-drive-linux-sync     # delete sync history, logs and the local trash
+```
+
+The last command also deletes the files in the local trash, so restore any you need first.
+Then delete the repo folder, which holds your `settings.yaml`.
 
 ## Credits
 

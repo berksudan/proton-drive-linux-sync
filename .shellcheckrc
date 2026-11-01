@@ -1,0 +1,3 @@
+shell=bash
+# Globals are set in one lib module and read in another; shellcheck checks one file at a time, so it reports them as unused (SC2034) or unassigned (SC2153).
+disable=SC2034,SC2153

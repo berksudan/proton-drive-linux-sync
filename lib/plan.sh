@@ -44,7 +44,8 @@ format_plan() {
         echo "No changes: everything is already in sync."
     else
         local IFS=,
-        echo "${parts[*]}" | sed 's/,/, /g'
+        local joined="${parts[*]}"
+        echo "${joined//,/, }"
     fi
     if [ "$EMPTY_WARNING" = true ]; then
         echo
@@ -97,7 +98,8 @@ result_text() {
         parts+=("no errors")
     fi
     local IFS=,
-    echo "${parts[*]}" | sed 's/,/, /g'
+    local joined="${parts[*]}"
+    echo "${joined//,/, }"
 }
 
 # True if deleting N files needs the user's confirmation.

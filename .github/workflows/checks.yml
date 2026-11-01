@@ -1,0 +1,42 @@
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    env:
+      PROTON_DRIVE_CLI_URL: https://proton.me/download/drive/cli/0.9.0/linux-x64/proton-drive
+      PROTON_DRIVE_CLI_SHA512: 3533025ba69ae112b64e3e01fbcc1ad0688136a4043f6cf6a72886967d85fdcd9ec235479c2e113171614be5225bfba93427509a05ca5aa6071d924fa7e91ca8
+      SHELLCHECK_VENV: /home/runner/shellcheck-venv
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install packages
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq inotify-tools jq python3-yaml
+          python3 -m venv "$SHELLCHECK_VENV"
+          "$SHELLCHECK_VENV/bin/pip" install --quiet shellcheck-py==0.11.0.1
+
+      - name: Install the Proton Drive CLI
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -fsSL "$PROTON_DRIVE_CLI_URL" -o "$HOME/.local/bin/proton-drive"
+          echo "$PROTON_DRIVE_CLI_SHA512  $HOME/.local/bin/proton-drive" | sha512sum --check --strict
+          chmod +x "$HOME/.local/bin/proton-drive"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Shellcheck
+        run: '"$SHELLCHECK_VENV/bin/shellcheck" proton-sync-tui.sh lib/*.sh lib/tui/*.sh scripts/*.sh'
+
+      - name: Offline tests
+        run: python3 tests/run_tests.py --offline

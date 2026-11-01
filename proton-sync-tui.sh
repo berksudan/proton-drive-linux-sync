@@ -7,7 +7,7 @@ LIB_DIR="$APP_DIR/lib"
 
 MODULES=(
     settings pairs state logging run_log lock execution local_files proton
-    conflicts transfers plan engine text schedule headless watch install cli
+    conflicts transfers plan folder_deletions engine text schedule headless watch install cli
     tui/widgets tui/sync_screens tui/conflict_screens tui/history_screens
     tui/restore_screens tui/settings_screens tui/pair_screens tui/account_screen
     tui/schedule_screen tui/main_menu

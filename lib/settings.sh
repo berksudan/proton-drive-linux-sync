@@ -46,6 +46,7 @@ CONFIG_FILE="$APP_DIR/settings.yaml"
 STATE_ROOT="${XDG_STATE_HOME:-$HOME/.local/state}/proton-drive-linux-sync"
 LOCK_FILE="$STATE_ROOT/sync.lock"
 RUN_LOG="$STATE_ROOT/runs.log"
+PROTON_FILES_ROOT="/my-files"
 
 # Field separator for manifests, snapshot and conflict list. The ASCII unit
 # separator can't realistically appear in a filename, unlike "|".
@@ -63,6 +64,7 @@ ARRAY_KEYS=(EXCLUDE_PATTERNS PAIR_LOCAL PAIR_REMOTE PAIR_MODE PAIR_SKIP)
 declare -a CFG_EXCLUDE_PATTERNS=() CFG_PAIR_LOCAL=() CFG_PAIR_REMOTE=() CFG_PAIR_MODE=() CFG_PAIR_SKIP=()
 ENV_PAIR=false     # true when PROTON_SYNC_LOCAL_DIR / _REMOTE_DIR set the folders
 
+# shellcheck disable=SC2016  # a jq program: its $names are jq variables, not shell ones
 SETTINGS_YAML_TO_SHELL='
 if type != "object" then error("the file must map setting names to values") else . end
 | ($scalar_keys | split(" ") | map(select(length > 0))) as $scalars
@@ -101,13 +103,14 @@ if type != "object" then error("the file must map setting names to values") else
 load_config() {
     local assignments i
     [ -f "$CONFIG_FILE" ] || return 0
-    if ! assignments=$(yq -r --arg scalar_keys "${SETTING_KEYS[*],,}" "$SETTINGS_YAML_TO_SHELL" "$CONFIG_FILE"); then
+    if ! assignments=$(python3 "$APP_DIR/lib/yaml_json.py" to-json "$CONFIG_FILE" \
+        | jq -r --arg scalar_keys "${SETTING_KEYS[*],,}" "$SETTINGS_YAML_TO_SHELL"); then
         echo "ERROR: couldn't read the settings in $CONFIG_FILE (see the message above)." >&2
         exit 1
     fi
     eval "$assignments"
     for i in "${!PAIR_LOCAL[@]}"; do
-        PAIR_LOCAL[$i]="${PAIR_LOCAL[$i]/#\~\//$HOME/}"
+        PAIR_LOCAL[i]="${PAIR_LOCAL[$i]/#\~\//$HOME/}"
     done
 }
 
@@ -166,7 +169,7 @@ save_config() {
     {
         echo "# Proton Drive Linux Sync settings, written by proton-sync-tui.sh."
         echo "# Every setting is described in settings.example.yaml."
-        yq -y . <<< "$settings_json"
+        python3 "$APP_DIR/lib/yaml_json.py" to-yaml <<< "$settings_json"
     } > "$tmp" && mv "$tmp" "$CONFIG_FILE"
 }
 
@@ -211,25 +214,44 @@ strip_slash() {
     if [ "$1" = "/" ]; then echo "/"; else echo "${1%/}"; fi
 }
 
+_stop_on_bad_setting() {
+    echo "ERROR: ${1,,} is \"${!1}\" in $2; it must be $3." >&2
+    exit 1
+}
+
+_validate_whole_number() {
+    is_number "${!1}" && [ "${!1}" -ge "$3" ] || _stop_on_bad_setting "$1" "$2" "a whole number of at least $3"
+}
+
+_validate_choice() {
+    local key="$1" source="$2" choice
+    shift 2
+    for choice in "$@"; do
+        [ "${!key}" = "$choice" ] && return 0
+    done
+    _stop_on_bad_setting "$key" "$source" "one of: $*"
+}
+
 validate_settings() {
-    is_number "$SYNC_JOBS" && [ "$SYNC_JOBS" -gt 0 ] || SYNC_JOBS=4
-    is_number "$TRASH_RETENTION_DAYS" || TRASH_RETENTION_DAYS=30
-    is_number "$LOG_RETENTION_DAYS" || LOG_RETENTION_DAYS=90
-    is_number "$DELETE_CONFIRM_COUNT" || DELETE_CONFIRM_COUNT=50
-    is_number "$DELETE_CONFIRM_PERCENT" || DELETE_CONFIRM_PERCENT=25
-    is_number "$MAX_FILE_SIZE_MB" || MAX_FILE_SIZE_MB=0
-    is_number "$WATCH_POLL_MINUTES" && [ "$WATCH_POLL_MINUTES" -gt 0 ] || WATCH_POLL_MINUTES=15
-    is_number "$WATCH_DELAY_SECONDS" && [ "$WATCH_DELAY_SECONDS" -gt 0 ] || WATCH_DELAY_SECONDS=5
-    case "$CONFLICT_STRATEGY" in ask|local|remote|both|skip) ;; *) CONFLICT_STRATEGY=ask ;; esac
-    case "$NOTIFY" in off|problems|changes) ;; *) NOTIFY=off ;; esac
-    [ "$DEBUG" = true ] || DEBUG=false
+    local source="$1"
+    _validate_whole_number SYNC_JOBS "$source" 1
+    _validate_whole_number TRASH_RETENTION_DAYS "$source" 0
+    _validate_whole_number LOG_RETENTION_DAYS "$source" 0
+    _validate_whole_number DELETE_CONFIRM_COUNT "$source" 0
+    _validate_whole_number DELETE_CONFIRM_PERCENT "$source" 0
+    _validate_whole_number MAX_FILE_SIZE_MB "$source" 0
+    _validate_whole_number WATCH_POLL_MINUTES "$source" 1
+    _validate_whole_number WATCH_DELAY_SECONDS "$source" 1
+    _validate_choice CONFLICT_STRATEGY "$source" ask local remote both skip
+    _validate_choice NOTIFY "$source" off problems changes
+    _validate_choice DEBUG "$source" true false
 
     local i
     for i in "${!PAIR_LOCAL[@]}"; do
-        PAIR_LOCAL[$i]=$(strip_slash "${PAIR_LOCAL[$i]}")
-        PAIR_REMOTE[$i]=$(strip_slash "${PAIR_REMOTE[$i]:-/my-files}")
-        case "${PAIR_MODE[$i]:-}" in two-way|upload|download) ;; *) PAIR_MODE[$i]=two-way ;; esac
-        PAIR_SKIP[$i]="${PAIR_SKIP[$i]:-}"
+        PAIR_LOCAL[i]=$(strip_slash "${PAIR_LOCAL[$i]}")
+        PAIR_REMOTE[i]=$(strip_slash "${PAIR_REMOTE[$i]:-$PROTON_FILES_ROOT}")
+        case "${PAIR_MODE[$i]:-}" in two-way|upload|download) ;; *) PAIR_MODE[i]=two-way ;; esac
+        PAIR_SKIP[i]="${PAIR_SKIP[$i]:-}"
     done
 }
 
@@ -239,13 +261,19 @@ select_pair() {
     LOCAL_DIR="${PAIR_LOCAL[$1]}"
     REMOTE_DIR="${PAIR_REMOTE[$1]}"
     SYNC_MODE="${PAIR_MODE[$1]}"
+    load_skip_paths "$1"
+    init_state_paths
+}
+
+load_skip_paths() {
     SKIP_PATHS=()
     local line
     while IFS= read -r line; do
         line="${line#/}"; line="${line%/}"
-        [ -n "$line" ] && SKIP_PATHS+=("$line")
+        if [ -n "$line" ]; then
+            SKIP_PATHS+=("$line")
+        fi
     done <<< "${PAIR_SKIP[$1]}"
-    init_state_paths
 }
 
 pair_count() {

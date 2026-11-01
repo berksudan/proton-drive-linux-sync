@@ -14,7 +14,7 @@ headless_sync() {
     if ! acquire_lock; then
         echo "ERROR: Another sync is already running (lock: $LOCK_FILE)" >&2
         echo "If you are sure no sync is running, remove it manually:" >&2
-        echo "  rmdir '$LOCK_FILE'" >&2
+        echo "  rm -r '$LOCK_FILE'" >&2
         return 3
     fi
 
@@ -22,7 +22,7 @@ headless_sync() {
         release_lock
         record_result "Stopped: not logged in to Proton Drive"
         notify critical "Proton Drive Linux Sync stopped" "Not logged in to Proton Drive. Run: proton-drive auth login"
-        echo "ERROR: Cannot access $REMOTE_DIR — are you logged in?" >&2
+        echo "ERROR: Not logged in to Proton Drive." >&2
         echo "Run: proton-drive auth login" >&2
         return 1
     fi

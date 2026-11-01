@@ -5,13 +5,15 @@
 ## Layout
 
 - `proton-sync-tui.sh`: entry point; sources each `lib/` module listed in `MODULES`, in that order, then calls `run_cli` (`lib/cli.sh`); `--help` lists the CLI options.
-- `lib/`: one module per concern: `settings`, `pairs`, `state`, `logging`, `run_log`, `lock`, `execution`, `local_files`, `proton` (all `proton-drive` CLI calls), `conflicts`, `transfers`, `plan`, `engine` (`sync_engine`), `text`, `schedule`, `headless`, `watch`, `install`, `cli`.
+- `lib/`: one module per concern: `settings`, `pairs`, `state`, `logging`, `run_log`, `lock`, `execution`, `local_files`, `proton` (all `proton-drive` CLI calls), `conflicts`, `transfers`, `plan`, `folder_deletions` (folders deleted on one side), `engine` (`sync_engine`), `text`, `schedule`, `headless`, `watch`, `install`, `cli`.
+- `lib/yaml_json.py`: converts `settings.yaml` to JSON for `load_config` and JSON back to YAML for `save_config`.
 - `lib/tui/`: the interactive menu (dialog or whiptail): `widgets` and one file per screen group, ending with `main_menu`.
 - A new module loads only once it is added to `MODULES` in `proton-sync-tui.sh`.
 - `scripts/setup.sh`: machine setup: apt packages, `settings.yaml` from the example when missing, continuous sync, then `--install`.
 - `settings.example.yaml`: tracked settings template holding every setting at its built-in default, with no folder pairs.
 - `settings.yaml`: this machine's settings and folder pairs (`CONFIG_FILE`, read by `load_config`, written by `save_config`), gitignored.
 - `tests/`: end-to-end test suite; `tests/README.md` explains how it isolates itself.
+- `.github/workflows/checks.yml`: CI on every push to `main` and every pull request: shellcheck 0.11.0 (settings in `.shellcheckrc`) and the offline tests.
 - `README.md`: user-facing overview, requirements, setup and common commands; update it when those change.
 - `docs/`: images shown in `README.md`, such as `docs/sync-run-log.png` (`--log` output).
 - `LICENSE`: MIT notice with the upstream copyright line and this fork's; keep both with the code.
@@ -19,7 +21,7 @@
 ## Runtime
 
 - Program code and settings live in this repo (`APP_DIR`); the repo never changes while syncs run.
-- Program state lives in `${XDG_STATE_HOME:-~/.local/state}/proton-drive-linux-sync` (`STATE_ROOT`): `runs.log` (`RUN_LOG`), and per folder pair in `pairs/<id>/` the sync history (`snapshot`), detailed per-run logs and the local trash, plus the lock while a sync runs.
+- Program state lives in `${XDG_STATE_HOME:-~/.local/state}/proton-drive-linux-sync` (`STATE_ROOT`): `runs.log` (`RUN_LOG`), and per folder pair in `pairs/<id>/` the sync history (`snapshot`), detailed per-run logs and the local trash; `sync.lock` (`LOCK_FILE`, directly in `STATE_ROOT`, one lock for all pairs) exists while a sync runs.
 - The only other files outside the repo are the hooks the system looks for elsewhere: the `~/.local/bin/proton-drive-linux-sync` link and desktop launcher (`install_script`, `uninstall_script`) and the systemd user units (`write_systemd_units`, `remove_automatic_sync`).
 - `--install` links `~/.local/bin/proton-drive-linux-sync` (`INSTALL_PATH`) to this repo's `proton-sync-tui.sh`, so background sync runs the repo files, uncommitted edits included, from its next restart; run `./proton-sync-tui.sh --install` to restart automatic sync on purpose.
 - Moving or deleting the repo breaks the installed command and automatic sync until `scripts/setup.sh` runs from the new location.
@@ -41,6 +43,7 @@
 
 - Run `python3 tests/run_tests.py --offline` after every change, and `python3 tests/run_tests.py` (about 2 minutes, uses the logged-in `proton-drive` CLI, runs Proton tests 6 at a time; `--jobs N` changes that) after changes to syncing, scheduling or `lib/proton.sh`.
 - Then check this machine with `proton-drive-linux-sync --status` and `proton-drive-linux-sync --log`.
+- Before tagging a release, run the full `python3 tests/run_tests.py`; CI runs only the offline tests, because the Proton tests need a logged-in account.
 
 ## Upstream
 

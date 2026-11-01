@@ -2,6 +2,8 @@
 # REMOTE LISTING
 # ============================================================
 
+PROTON_ENTRY_NAME_JQ='(if .name | type == "object" then .name.value else .name end)'
+
 # list_remote_dir PREFIX
 # Print manifest lines for the direct children of $REMOTE_DIR/PREFIX:
 #   folder<SEP>rel<SEP><SEP>   and   file<SEP>rel<SEP>size<SEP>mtime
@@ -30,7 +32,7 @@ list_remote_dir() {
     printf '%s' "$json" | jq -r '
         .[] |
         (if .type | type == "object" then .type.value else .type end) as $type |
-        (if .name | type == "object" then .name.value else .name end) as $name |
+        '"$PROTON_ENTRY_NAME_JQ"' as $name |
         (if .mediaType | type == "object" then .mediaType.value else (.mediaType // "") end) as $media |
         (((.activeRevision.value // .activeRevision) | .claimedSize) // 0) as $size |
         (((.activeRevision.value // .activeRevision) | .claimedModificationTime) // "") as $mtime |
@@ -131,6 +133,16 @@ list_remote_tree() {
     return "$failed"
 }
 
+list_remote_entry_names() {
+    local json
+    json=$(proton-drive filesystem list "$1" -j 2>>"$LOG_FILE") || return 1
+    printf '%s' "$json" | jq -r '.[] | '"$PROTON_ENTRY_NAME_JQ"' | gsub("\n"; "\\n")'
+}
+
+trash_remote_path() {
+    run_retry proton-drive filesystem trash "$1"
+}
+
 fetch_remote_fingerprint() {
     local remote_path="$1"
     local info rsize rmtime rmtime_epoch
@@ -205,9 +217,17 @@ ensure_local_folders() {
 # AUTHENTICATION
 # ============================================================
 
+proton_folder_exists() {
+    proton-drive filesystem list "$1" -j >/dev/null 2>&1
+}
+
+create_proton_folder() {
+    proton-drive filesystem create-folder "$(dirname "$1")" "$(basename "$1")" >/dev/null
+}
+
 # Returns 0 if authenticated, 1 otherwise.
 is_authenticated() {
-    proton-drive filesystem list "$REMOTE_DIR" -j >/dev/null 2>&1
+    proton_folder_exists "$PROTON_FILES_ROOT"
 }
 
 check_remote_manifest_sane() {
@@ -273,7 +293,7 @@ Log in now? (Choosing Cancel closes the app.)" "Log in" "Cancel" || return 1
         fi
 
         if [ -n "$UI_TOOL" ]; then
-            ui_yesno "Login Failed" "Still can't open $REMOTE_DIR on Proton Drive.
+            ui_yesno "Login Failed" "Still can't open Proton Drive.
 
 The login may not have finished. Try again?" "Try again" "Cancel" || return 1
         else
@@ -300,14 +320,17 @@ do_remote_move() {
     else
         target_parent_path="$REMOTE_DIR/$new_parent"
     fi
+    REMOTE_MOVE_LANDED_REL="$old_rel"
     ensure_remote_folders "$new_parent"
     if [ "$old_parent" != "$new_parent" ]; then
         run_retry proton-drive filesystem move \
             "$REMOTE_DIR/$old_rel" "$target_parent_path" || return 1
+        REMOTE_MOVE_LANDED_REL="${new_parent:+$new_parent/}$old_base"
     fi
     if [ "$old_base" != "$new_base" ]; then
         run_retry proton-drive filesystem rename \
             "$target_parent_path/$old_base" "$new_base" || return 1
     fi
+    REMOTE_MOVE_LANDED_REL="$new_rel"
     return 0
 }

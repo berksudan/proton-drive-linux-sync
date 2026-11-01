@@ -45,6 +45,7 @@ class CommandLineTests(_OfflineTestCase):
             "--schedule KIND",
             "--install",
             "--uninstall",
+            "--version",
             "--help",
         ):
             self.assertIn(option, completed.stdout)
@@ -241,9 +242,14 @@ class SetupScriptTests(_OfflineTestCase):
         self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
         for step in ("[1/4]", "[2/4]", "[3/4]", "[4/4]", "Setup done.", "Keeping " + str(self.sandbox.config_file)):
             self.assertIn(step, completed.stdout)
-        self.assertIn("sudo needed for: apt-get install -y -qq dialog inotify-tools jq libnotify-bin yq", completed.stdout)
-        self.assertTrue(
-            any("apt-get install -y -qq dialog inotify-tools jq libnotify-bin yq" in call for call in self.sandbox.stub_calls("sudo"))
+        self.assertIn("sudo needed for: apt-get update -qq", completed.stdout)
+        self.assertIn("sudo needed for: apt-get install -y -qq dialog inotify-tools jq libnotify-bin python3-yaml", completed.stdout)
+        self.assertEqual(
+            self.sandbox.stub_calls("sudo")[:2],
+            [
+                "-p [sudo] password for %u:  apt-get update -qq",
+                "-p [sudo] password for %u:  apt-get install -y -qq dialog inotify-tools jq libnotify-bin python3-yaml",
+            ],
         )
         watch_unit = (self.sandbox.unit_dir / "proton-drive-linux-sync-watch.service").read_text()
         self.assertIn('"' + str(self.sandbox.installed_command) + '" --watch', watch_unit)
@@ -262,6 +268,17 @@ class SetupScriptTests(_OfflineTestCase):
 
 
 class SettingsFileTests(_OfflineTestCase):
+    def test_missing_pyyaml_stops_with_the_install_hint(self) -> None:
+        python_stub = self.sandbox.stub_dir / "python3"
+        python_stub.write_text("#!/bin/sh\nexit 1\n")
+        python_stub.chmod(0o755)
+        completed = self.sandbox.run("--status")
+        self.assertEqual(completed.returncode, 1, completed.stdout)
+        self.assertEqual(
+            completed.stderr,
+            "ERROR: reading the settings needs Python 3 with PyYAML. Install it with: sudo apt install python3-yaml\n",
+        )
+
     def test_example_settings_are_the_built_in_defaults(self) -> None:
         example = yaml.safe_load(self.sandbox.example_config_file.read_text())
         self.assertEqual(self.sandbox.save_settings_through_script(source=self.sandbox.example_config_file), example)
@@ -305,6 +322,7 @@ class SettingsFileTests(_OfflineTestCase):
             ("exclude_patterns: '*.tmp'\n", "exclude_patterns must be a list of names"),
             ("sync_jobs: [1, 2]\n", "setting sync_jobs must be a single value"),
             ("- just\n- a list\n", "the file must map setting names to values"),
+            ("sync_jobs: [1\n", "while parsing a flow sequence; in \"" + str(self.sandbox.config_file) + "\", line 1, column 12"),
         ):
             with self.subTest(problem=problem):
                 self.sandbox.write_config_text(text)
@@ -312,5 +330,26 @@ class SettingsFileTests(_OfflineTestCase):
                     completed = self.sandbox.run(*args)
                     self.assertEqual(completed.returncode, 1, completed.stdout)
                     self.assertIn(problem, completed.stderr)
+                    self.assertNotIn("Traceback", completed.stderr)
                     self.assertIn("couldn't read the settings in " + str(self.sandbox.config_file), completed.stderr)
+        config_file = str(self.sandbox.config_file)
+        for text, environment, problem in (
+            ("sync_jobs: 0\n", {}, 'sync_jobs is "0" in ' + config_file + "; it must be a whole number of at least 1."),
+            (
+                "conflict_strategy: keep-local\n",
+                {},
+                'conflict_strategy is "keep-local" in ' + config_file + "; it must be one of: ask local remote both skip.",
+            ),
+            (
+                "",
+                {"PROTON_SYNC_JOBS": "none"},
+                'sync_jobs is "none" in the PROTON_SYNC_* environment variables; it must be a whole number of at least 1.',
+            ),
+        ):
+            with self.subTest(problem=problem):
+                self.sandbox.write_config_text(text)
+                for args in (("--status",), ("--headless",)):
+                    completed = self.sandbox.run(*args, env_overrides=environment)
+                    self.assertEqual(completed.returncode, 1, completed.stdout)
+                    self.assertEqual(completed.stderr, "ERROR: " + problem + "\n")
         self.assertFalse((self.sandbox.state_root / "pairs").exists())

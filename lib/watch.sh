@@ -1,18 +1,23 @@
 # event_needs_sync PATH — 0 if PATH changed in a way the last sync hasn't
 # recorded (the user changed something), 1 if it's the sync's own doing or
-# irrelevant (excluded names, download-only folders, folders).
+# irrelevant (excluded names, skipped folders, files over the size limit,
+# download-only folders, folders).
 event_needs_sync() {
     local path="$1" i rel snap fp
+    local -a SKIP_PATHS=()
     for i in "${!PAIR_LOCAL[@]}"; do
         [ "${PAIR_MODE[$i]}" = download ] && continue
         case "$path" in "${PAIR_LOCAL[$i]}"/*) ;; *) continue ;; esac
         rel="${path#"${PAIR_LOCAL[$i]}"/}"
         is_excluded "$rel" && return 1
+        load_skip_paths "$i"
+        is_skipped_path "$rel" && return 1
         snap="$(pair_state_dir "${PAIR_LOCAL[$i]}" "${PAIR_REMOTE[$i]}")/snapshot"
         if [ -d "$path" ]; then
             return 1
         elif [ -f "$path" ]; then
             fp=$(get_local_fingerprint "$path")
+            [ "$MAX_FILE_SIZE_MB" -gt 0 ] && [ "${fp%%|*}" -gt $((MAX_FILE_SIZE_MB * 1048576)) ] && return 1
             grep -qF "file${SEP}${rel}${SEP}${fp}${SEP}" "$snap" 2>/dev/null && return 1
             return 0
         else

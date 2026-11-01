@@ -140,7 +140,6 @@ write_systemd_units() {
         cat > "$UNIT_DIR/$WATCH_UNIT" <<UNIT
 [Unit]
 Description=Proton Drive Linux Sync (continuous)
-After=network-online.target
 
 [Service]
 Type=simple
@@ -161,7 +160,6 @@ UNIT
     cat > "$UNIT_DIR/$SERVICE_UNIT" <<UNIT
 [Unit]
 Description=Proton Drive Linux Sync
-After=network-online.target
 
 [Service]
 Type=oneshot

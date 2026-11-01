@@ -5,11 +5,9 @@
 # Re-check the login before a sync (the session may have expired).
 preflight() {
     ui_infobox "Please Wait" "Checking your Proton Drive login..."
-    if ! is_authenticated; then
-        if ! ensure_authenticated; then
-            ui_msgbox "Not Logged In" "Can't open $REMOTE_DIR on Proton Drive, so the sync can't run."
-            return 1
-        fi
+    if ! ensure_authenticated; then
+        ui_msgbox "Not Logged In" "You're not logged in to Proton Drive, so the sync can't run."
+        return 1
     fi
     AUTH_STATE=in
     return 0

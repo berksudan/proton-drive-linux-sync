@@ -10,7 +10,7 @@ logs_menu() {
         result=$(grep -m1 '^RESULT: ' "$f" 2>/dev/null | cut -c9-)
         [ -z "$result" ] && result="(no result recorded)"
         items+=("$f" "$(pretty_stamp "${name#sync-}")  $result")
-    done < <(ls -1 "$LOG_DIR"/sync-*.log 2>/dev/null | sort -r | head -200)
+    done < <(find "$LOG_DIR" -maxdepth 1 -type f -name 'sync-*.log' 2>/dev/null | sort -r | head -200)
 
     if [ "${#items[@]}" -eq 0 ]; then
         ui_msgbox "Sync History" "No syncs have run for this folder pair yet."
@@ -34,7 +34,7 @@ view_log() {
         ui_textbox "Full log: $(pretty_stamp "${name#sync-}")" "$f"
         return
     fi
-    grep -E '^(RESULT:|=== Sync started|\[(UPLOAD|DOWNLOAD|MOVE|DELETED|CONFLICT|RESOLVE|ERROR|FATAL|STOPPED|RETRY|SKIP|CREATE))' \
+    grep -E '^(RESULT:|=== Sync started|\[(UPLOAD|DOWNLOAD|MOVE|DELETED|CONFLICT|RESOLVE|ERROR|FATAL|STOPPED|RETRY|SKIP|CREATE|KEPT))' \
         "$f" > "$view" 2>/dev/null
     [ -s "$view" ] || echo "No changes or problems in this sync." > "$view"
     ui_textbox "Changes and problems: $(pretty_stamp "${name#sync-}")" "$view"

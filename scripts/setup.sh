@@ -2,7 +2,7 @@
 set -euo pipefail
 
 REPO_DIR=$(dirname "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")")
-APT_PACKAGES=(dialog inotify-tools jq libnotify-bin yq)
+APT_PACKAGES=(dialog inotify-tools jq libnotify-bin python3-yaml)
 
 print_step() {
     printf '\n\033[1m%s\033[0m\n' "$1"
@@ -17,7 +17,12 @@ ensure_not_root() {
 
 ensure_proton_cli() {
     command -v proton-drive >/dev/null || {
-        echo "ERROR: proton-drive CLI not found. Install it from https://proton.me/drive, then rerun." >&2
+        cat >&2 <<'MESSAGE'
+ERROR: the proton-drive command isn't installed. Install Proton's Drive CLI, then rerun setup:
+  1. Download the Linux file from https://proton.me/download/drive/cli/index.html
+  2. chmod +x proton-drive && mkdir -p ~/.local/bin && mv proton-drive ~/.local/bin/
+  3. proton-drive auth login
+MESSAGE
         exit 1
     }
 }
@@ -28,6 +33,7 @@ run_as_root() {
 }
 
 install_apt_packages() {
+    run_as_root apt-get update -qq
     run_as_root apt-get install -y -qq "${APT_PACKAGES[@]}"
 }
 

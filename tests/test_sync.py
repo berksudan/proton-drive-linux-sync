@@ -74,6 +74,41 @@ class TwoWaySyncTests(harness.SyncTestCase):
         self.assertEqual(self.last_run().result, "1 moved, no errors")
 
 
+class FolderDeletionTests(harness.SyncTestCase):
+    def test_new_local_file_in_a_folder_trashed_on_proton_is_kept_on_both_sides(self) -> None:
+        self.configure()
+        self.write_local("keep.txt", "keep")
+        self.write_local("project/a.txt", "a")
+        self.sync()
+        harness.remote_trash(self.remote + "/project")
+        self.write_local("project/new.txt", "new")
+        self.sync()
+        self.sync()
+        self.assertEqual((self.local / "project" / "new.txt").read_text(), "new")
+        self.assertFalse((self.local / "project" / "a.txt").exists())
+        self.assertEqual(set(self.remote_names("project")), {"new.txt"})
+        self.assertEqual(self.local_trash_names(), {"a.txt"})
+        self.assertEqual(self.last_run().result, "no changes, no errors")
+
+    def test_folders_holding_unsynced_items_are_kept_on_both_sides(self) -> None:
+        self.configure()
+        self.write_local("from-proton/a.txt", "a")
+        self.write_local("from-proton/.git/config", "git")
+        self.write_local("from-local/b.txt", "b")
+        self.sync()
+        self.put_remote(relative="from-local/scratch.tmp", content="temp")
+        harness.remote_trash(self.remote + "/from-proton")
+        shutil.rmtree(self.local / "from-local")
+        preview = self.sync("--dry-run").stdout
+        self.assertIn("Kept from-proton/: it holds items that aren't synced", preview)
+        self.assertIn("Kept from-local/: it holds items that aren't synced", preview)
+        self.sync()
+        self.assertEqual((self.local / "from-proton" / ".git" / "config").read_text(), "git")
+        self.assertFalse((self.local / "from-proton" / "a.txt").exists())
+        self.assertEqual(set(self.remote_names("from-local")), {"scratch.tmp"})
+        self.assertEqual(self.last_run().result, "2 deleted, no errors")
+
+
 class ConflictTests(harness.SyncTestCase):
     local_edit = "local edit"
     remote_edit = "remote edit, longer"
@@ -178,6 +213,13 @@ class SafetyTests(harness.SyncTestCase):
         self.sync(expected_exit=1)
         self.assertEqual(self.last_run().result, "Stopped: local folder is missing")
         self.assertEqual(set(self.remote_names()), {"a.txt", "b.txt"})
+
+    def test_missing_proton_folder_stops_as_unlistable_not_as_logged_out(self) -> None:
+        self.remote += "/missing"
+        self.configure()
+        completed = self.sync(expected_exit=1)
+        self.assertIn("Could not list one or more remote folders", completed.stderr)
+        self.assertNotIn("logged in", completed.stderr)
 
     def test_dry_run_changes_nothing_and_is_not_logged(self) -> None:
         self.configure()

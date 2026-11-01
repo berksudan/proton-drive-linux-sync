@@ -20,6 +20,12 @@ print_status() {
     done
 }
 
+print_version() {
+    local version
+    version=$(git --git-dir="$APP_DIR/.git" --work-tree="$APP_DIR" describe --tags --always --dirty) || return 1
+    echo "Proton Drive Linux Sync $version"
+}
+
 usage() {
     cat <<USAGE
 Usage: $(basename "$0") [OPTIONS]
@@ -47,10 +53,22 @@ Usage: $(basename "$0") [OPTIONS]
                    add a desktop launcher. Settings stay in settings.yaml.
   --uninstall      Remove that link and the launcher (keeps your settings
                    and sync history).
+  --version        Show the installed version (the repo's git version).
   --help           Show this help.
 
 Settings are read from $CONFIG_FILE
 USAGE
+}
+
+ensure_settings_tools() {
+    if ! command -v jq >/dev/null 2>&1; then
+        echo "ERROR: reading the settings needs jq. Install it with: sudo apt install jq" >&2
+        exit 1
+    fi
+    if ! python3 -c 'import yaml' >/dev/null 2>&1; then
+        echo "ERROR: reading the settings needs Python 3 with PyYAML. Install it with: sudo apt install python3-yaml" >&2
+        exit 1
+    fi
 }
 
 run_cli() {
@@ -91,6 +109,7 @@ run_cli() {
                 ACTION=schedule ;;
             --install) ACTION=install ;;
             --uninstall) ACTION=uninstall ;;
+            --version) print_version; exit $? ;;
             -h|--help) usage; exit 0 ;;
             *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
         esac
@@ -104,11 +123,12 @@ run_cli() {
         echo "-n only works with --log" >&2; exit 2
     fi
 
+    ensure_settings_tools
     load_config
-    validate_settings
+    validate_settings "$CONFIG_FILE"
     remember_saved_settings
     apply_env_overrides
-    validate_settings
+    validate_settings "the PROTON_SYNC_* environment variables"
     mkdir -p "$STATE_ROOT"
 
     if [ "$START_FRESH" = true ] && [ -z "$ONLY_PAIR" ] && [ "$(pair_count)" -gt 1 ]; then
@@ -137,11 +157,6 @@ run_cli() {
 
     if ! command -v proton-drive >/dev/null 2>&1; then
         echo "ERROR: 'proton-drive' command not found in PATH." >&2
-        exit 1
-    fi
-
-    if ! command -v jq >/dev/null 2>&1; then
-        echo "ERROR: 'jq' is required but not installed." >&2
         exit 1
     fi
 
